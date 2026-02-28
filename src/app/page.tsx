@@ -10,7 +10,10 @@ export default function HomePage() {
         <div className={styles.navInner}>
           <div className={styles.brand}>
             <span className={styles.brandIcon}>♔</span>
-            <span className={styles.brandName}>ChessCash</span>
+            <div className={styles.brandText}>
+              <span className={styles.brandName}>ChessCash</span>
+              <span className={styles.brandTag}>The Gentleman&apos;s Club</span>
+            </div>
           </div>
           <div className={styles.navLinks}>
             <Link href="/game" className={styles.navLink}>Play</Link>
@@ -33,6 +36,7 @@ export default function HomePage() {
             <span className="text-shimmer">Your Money.</span><br />
             Your Move.
           </h1>
+          <p className={styles.heroClub}>Welcome to The Gentleman&apos;s Club.</p>
           <p className={styles.heroSub}>
             Compete in head-to-head chess matches for real cash prizes.
             No luck. No algorithms. Just pure skill.
@@ -127,6 +131,7 @@ export default function HomePage() {
           <div className={styles.footerBrand}>
             <span>♔</span> ChessCash
           </div>
+          <p className={styles.footerTagline}>The Gentleman&apos;s Club &mdash; Where Skill Meets Stakes</p>
           <div className={styles.footerLinks}>
             <a>Terms of Service</a>
             <a>Privacy Policy</a>

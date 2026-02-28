@@ -43,6 +43,24 @@
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandTag {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-gold);
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+  line-height: 1;
+  margin-top: -2px;
 }
 
 .navLinks {
@@ -110,7 +128,18 @@
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+}
+
+.heroClub {
+  font-family: var(--font-body);
+  font-size: 1.3rem;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+  opacity: 0.85;
 }
 
 .heroSub {
@@ -348,7 +377,17 @@
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--gold);
-  margin-bottom: 16px;
+  margin-bottom: 6px;
+}
+
+.footerTagline {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-gold);
+  opacity: 0.7;
+  margin-bottom: 20px;
+  letter-spacing: 0.03em;
 }
 
 .footerLinks {
