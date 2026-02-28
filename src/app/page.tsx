@@ -1,66 +1,144 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import React from 'react';
+import Link from 'next/link';
+import styles from './page.module.css';
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+      {/* Navigation */}
+      <nav className={styles.nav}>
+        <div className={styles.navInner}>
+          <div className={styles.brand}>
+            <span className={styles.brandIcon}>♔</span>
+            <span className={styles.brandName}>ChessCash</span>
+          </div>
+          <div className={styles.navLinks}>
+            <Link href="/game" className={styles.navLink}>Play</Link>
+            <a className={styles.navLink}>Leaderboard</a>
+            <a className={styles.navLink}>How It Works</a>
+            <button className="btn btn-gold btn-sm">Sign Up</button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <div className={styles.heroBadge}>
+            <span className={styles.heroBadgeDot} />
+            Skill-Based • 100% Legal • Real Money
+          </div>
+          <h1 className={styles.heroTitle}>
+            Your Mind.<br />
+            <span className="text-shimmer">Your Money.</span><br />
+            Your Move.
+          </h1>
+          <p className={styles.heroSub}>
+            Compete in head-to-head chess matches for real cash prizes.
+            No luck. No algorithms. Just pure skill.
+          </p>
+          <div className={styles.heroCTA}>
+            <Link href="/game" className="btn btn-gold btn-lg">
+              Play Now — $1 Entry
+            </Link>
+            <a className="btn btn-outline btn-lg">
+              Learn More
+            </a>
+          </div>
+          <div className={styles.heroStats}>
+            <div className={styles.stat}>
+              <span className={styles.statValue}>10K+</span>
+              <span className={styles.statLabel}>Players</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.stat}>
+              <span className={styles.statValue}>$50K+</span>
+              <span className={styles.statLabel}>Paid Out</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.stat}>
+              <span className={styles.statValue}>100%</span>
+              <span className={styles.statLabel}>Skill</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero visual — chess piece silhouette */}
+        <div className={styles.heroVisual}>
+          <div className={styles.heroBoard}>
+            <div className={styles.heroPiece}>♚</div>
+            <div className={styles.heroGlow} />
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section className={styles.howSection}>
+        <h2 className={styles.sectionTitle}>How It Works</h2>
+        <p className={styles.sectionSub}>Three steps to your first cash game</p>
+        <div className={styles.steps}>
+          {[
+            { icon: '👤', title: 'Create Account', desc: 'Sign up in 30 seconds. Verify your identity to unlock cash games.' },
+            { icon: '💰', title: 'Fund Your Wallet', desc: 'Deposit $5-$50 via card or Apple Pay. Secure, instant, and tracked.' },
+            { icon: '♟️', title: 'Play & Win', desc: 'Match with a player your skill level. Win the pot. Withdraw anytime.' },
+          ].map((step, i) => (
+            <div key={i} className={styles.stepCard}>
+              <div className={styles.stepNumber}>{i + 1}</div>
+              <div className={styles.stepIcon}>{step.icon}</div>
+              <h3>{step.title}</h3>
+              <p>{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className={styles.features}>
+        <div className={styles.featureGrid}>
+          {[
+            { icon: '🎨', title: 'Customize Everything', desc: 'Choose from premium piece sets, board themes, colors, and sound packs. Make the board yours.' },
+            { icon: '⚡', title: 'Instant Matchmaking', desc: 'Get matched with players at your skill level in seconds. Fair games, every time.' },
+            { icon: '🔒', title: 'Secure & Legal', desc: 'Chess is a 100% skill game. Legal in 40+ states. Your money is safe with Stripe escrow.' },
+            { icon: '📊', title: 'Track Your Progress', desc: 'ELO ratings, win streaks, earnings history. Watch yourself grow.' },
+          ].map((f, i) => (
+            <div key={i} className={styles.featureCard}>
+              <span className={styles.featureIcon}>{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <h2>Ready to Put Your Skills<br /><span className="text-shimmer">Where Your Money Is?</span></h2>
+          <p>Join thousands of chess players competing for real cash prizes.</p>
+          <Link href="/game" className="btn btn-gold btn-lg">
+            Start Playing
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerBrand}>
+            <span>♔</span> ChessCash
+          </div>
+          <div className={styles.footerLinks}>
+            <a>Terms of Service</a>
+            <a>Privacy Policy</a>
+            <a>Responsible Gaming</a>
+            <a>Support</a>
+          </div>
+          <p className={styles.footerDisclaimer}>
+            ChessCash is a skill-based gaming platform. Must be 18+ to play for cash.
+            Not available in all states. Please play responsibly.
           </p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </footer>
     </div>
   );
 }
