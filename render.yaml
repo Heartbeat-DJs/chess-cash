@@ -1,0 +1,12 @@
+# Render Blueprint — free WebSocket relay for ChessCash online play.
+# Deploy: push this repo to GitHub, then on render.com → New → Blueprint,
+# point it at the repo. Render reads this file and creates the service.
+services:
+  - type: web
+    name: chesscash-relay
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/ws-server.js
+    healthCheckPath: /
+    autoDeploy: true

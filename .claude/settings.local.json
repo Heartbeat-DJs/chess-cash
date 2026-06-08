@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"=== exit $? ===\")",
+      "Bash(curl -s http://localhost:8787/health)",
+      "Bash(lsof -ti:8787)",
+      "Bash(xargs kill -9)",
+      "Bash(lsof -ti:3001)",
+      "Bash(pkill -f wrangler)"
+    ]
+  }
+}

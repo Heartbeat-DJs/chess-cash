@@ -1,0 +1,158 @@
+.lobby {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 28px;
+}
+
+.logo {
+    position: absolute;
+    top: 24px;
+    left: 28px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--gold, #d4af37);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(20, 20, 24, 0.85);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 18px;
+    padding: 32px 28px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.title {
+    font-size: 1.7rem;
+    text-align: center;
+    margin: 0;
+}
+
+.sub {
+    text-align: center;
+    opacity: 0.7;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.tcRow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.tcBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+.tcActive {
+    border-color: var(--gold, #d4af37);
+    background: rgba(212, 175, 55, 0.12);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    opacity: 0.5;
+    font-size: 0.8rem;
+    gap: 10px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.joinRow {
+    display: flex;
+    gap: 8px;
+}
+
+.codeInput {
+    flex: 1;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: inherit;
+    font-size: 1.1rem;
+    letter-spacing: 4px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.status {
+    text-align: center;
+    opacity: 0.7;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.error {
+    text-align: center;
+    color: #ff6b6b;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.bigCode {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: 10px;
+    text-align: center;
+    color: var(--gold, #d4af37);
+    padding: 18px;
+    background: rgba(212, 175, 55, 0.08);
+    border: 2px dashed rgba(212, 175, 55, 0.4);
+    border-radius: 14px;
+    cursor: pointer;
+    user-select: all;
+}
+
+.hint {
+    text-align: center;
+    opacity: 0.45;
+    font-size: 0.75rem;
+    margin: 0;
+    word-break: break-all;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    margin: 6px auto;
+    border: 3px solid rgba(212, 175, 55, 0.2);
+    border-top-color: var(--gold, #d4af37);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
