@@ -45,9 +45,9 @@ export default function HomePage() {
             <Link href="/game" className="btn btn-gold btn-lg">
               Play Now — $1 Entry
             </Link>
-            <a className="btn btn-outline btn-lg">
-              Learn More
-            </a>
+            <Link href="/computer" className="btn btn-outline btn-lg">
+              ♟ vs Computer
+            </Link>
           </div>
           <div className={styles.heroStats}>
             <div className={styles.stat}>

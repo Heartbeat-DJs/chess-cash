@@ -1,0 +1,466 @@
+/* ===================================================================
+   ChessCash — Computer Mode Styles
+   =================================================================== */
+
+/* ── Selection Screen ──────────────────────────────────────────── */
+.selectPage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.selectMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 32px 60px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 36px;
+}
+
+.selectTitle {
+  text-align: center;
+}
+
+.selectTitle h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.selectTitle p {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--text-tertiary);
+  font-size: 1.1rem;
+}
+
+/* ── Difficulty Cards ──────────────────────────────────────────── */
+.difficultyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.diffCard {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.diffCard:hover {
+  border-color: var(--border-medium);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.diffActive {
+  border-color: var(--gold) !important;
+  background: rgba(197, 151, 59, 0.06);
+  box-shadow: var(--shadow-gold), var(--shadow-lg);
+}
+
+.diffIcon {
+  font-size: 3.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.diffActive .diffIcon {
+  animation: pieceFloat 3s ease-in-out infinite;
+}
+
+.diffInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diffLabel {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.diffSub {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--gold);
+  opacity: 0.8;
+}
+
+.diffDesc {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.diffRating {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  background: var(--bg-surface-raised);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-top: 6px;
+  display: inline-block;
+}
+
+.diffCheck {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Options Row ───────────────────────────────────────────────── */
+.optionsRow {
+  display: flex;
+  gap: 32px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.optionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.optionLabel {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.colorPicker {
+  display: flex;
+  gap: 8px;
+}
+
+.colorBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.colorBtn:hover {
+  border-color: var(--border-medium);
+}
+
+.colorActive {
+  border-color: var(--gold) !important;
+  color: var(--text-primary);
+  background: rgba(197, 151, 59, 0.08);
+}
+
+.colorPiece { font-size: 1.3rem; }
+.colorPieceDark { font-size: 1.3rem; }
+
+.tcRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tcChip {
+  padding: 8px 14px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tcChip:hover {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.tcChipActive {
+  border-color: var(--gold) !important;
+  color: var(--gold-light) !important;
+  background: rgba(197, 151, 59, 0.08);
+}
+
+.startBtn {
+  margin-top: 8px;
+  min-width: 280px;
+}
+
+/* ── Game Screen ───────────────────────────────────────────────── */
+.gamePage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logoIcon { font-size: 1.8rem; color: var(--gold); }
+.logoText {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.headerTag {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--gold);
+  opacity: 0.6;
+}
+
+.gameInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diffBadge {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 4px 14px;
+  background: rgba(197, 151, 59, 0.1);
+  border: 1px solid rgba(197, 151, 59, 0.25);
+  border-radius: var(--radius-full);
+  color: var(--gold-light);
+}
+
+.thinkingBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.thinkingDots span {
+  animation: pulse 1.2s ease-in-out infinite;
+  display: inline-block;
+}
+
+.thinkingDots span:nth-child(2) { animation-delay: 0.2s; }
+.thinkingDots span:nth-child(3) { animation-delay: 0.4s; }
+
+.gameArea {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 32px;
+  padding: 32px;
+}
+
+.leftPanel, .rightPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+.boardArea {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Opponent Card ─────────────────────────────────────────────── */
+.opponentCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.opponentIcon { font-size: 2rem; }
+
+.opponentInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.opponentName {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.opponentSub {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+.thinkingIndicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: thinkSlide 1.5s ease-in-out infinite;
+}
+
+@keyframes thinkSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ── Game Over Overlay ─────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 8, 0.85);
+  backdrop-filter: blur(6px);
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease;
+}
+
+.overlayCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  max-width: 380px;
+}
+
+.resultIcon {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+  animation: crownAppear 0.6s ease;
+}
+
+.resultTitle {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+}
+
+.resultSub {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+  margin-bottom: 24px;
+}
+
+.overlayActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .gameArea {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 16px;
+  }
+  .leftPanel, .rightPanel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .difficultyGrid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+  .optionsRow {
+    flex-direction: column;
+    align-items: center;
+  }
+  .selectMain {
+    padding-top: 80px;
+  }
+}

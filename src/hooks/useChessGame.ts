@@ -36,9 +36,9 @@ export function useChessGame(options: UseChessGameOptions = {}) {
         to: Square;
     } | null>(null);
 
-    // Timer logic
+    // Timer logic — starts immediately, reads turn from latest state
     useEffect(() => {
-        if (gameState.status !== 'active' || gameState.moveCount < 2) return;
+        if (gameState.status !== 'active') return;
 
         lastTickRef.current = Date.now();
         timerRef.current = setInterval(() => {
@@ -60,7 +60,7 @@ export function useChessGame(options: UseChessGameOptions = {}) {
                         whiteTime: newWhiteTime,
                         blackTime: newBlackTime,
                         status: 'completed',
-                        result: newWhiteTime <= 0 ? 'black_wins' : 'white_wins',
+                        result: 'timeout',
                         isGameOver: true,
                     };
                 }
@@ -76,7 +76,7 @@ export function useChessGame(options: UseChessGameOptions = {}) {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [gameState.status, gameState.moveCount, gameState.turn]);
+    }, [gameState.status]);
 
     // Game over callback
     useEffect(() => {
@@ -99,24 +99,34 @@ export function useChessGame(options: UseChessGameOptions = {}) {
                     return;
                 }
 
-                // Make the move with increment
+                // Make the move with increment — use functional update to preserve timer state
                 const { newState, move } = makeMove(chess, gameState, gameState.selectedSquare, square);
                 if (move) {
-                    const tc = TIME_CONTROLS[gameState.timeControl];
-                    const increment = tc.increment * 1000;
-                    const updatedState = {
+                    setGameState((prev) => ({
                         ...newState,
-                        whiteTime: move.color === 'w' ? newState.whiteTime + increment : newState.whiteTime,
-                        blackTime: move.color === 'b' ? newState.blackTime + increment : newState.blackTime,
-                    };
-                    setGameState(updatedState);
+                        whiteTime: prev.whiteTime,
+                        blackTime: prev.blackTime,
+                    }));
                 }
                 return;
             }
 
-            // Otherwise, select the square
-            const newState = selectSquare(chess, gameState, square);
-            setGameState(newState);
+            // Otherwise, select the square (preserve timer values from latest state)
+            const piece = chess.get(square);
+            if (piece && piece.color === gameState.turn) {
+                const legalMoves = getLegalMovesForSquare(chess, square);
+                setGameState((prev) => ({
+                    ...prev,
+                    selectedSquare: square,
+                    legalMoves,
+                }));
+            } else {
+                setGameState((prev) => ({
+                    ...prev,
+                    selectedSquare: null,
+                    legalMoves: [],
+                }));
+            }
         },
         [gameState]
     );
@@ -134,15 +144,11 @@ export function useChessGame(options: UseChessGameOptions = {}) {
                 piece
             );
 
-            const tc = TIME_CONTROLS[gameState.timeControl];
-            const increment = tc.increment * 1000;
-            const updatedState = {
+            setGameState((prev) => ({
                 ...newState,
-                whiteTime: gameState.turn === 'w' ? newState.whiteTime + increment : newState.whiteTime,
-                blackTime: gameState.turn === 'b' ? newState.blackTime + increment : newState.blackTime,
-            };
-
-            setGameState(updatedState);
+                whiteTime: prev.whiteTime,
+                blackTime: prev.blackTime,
+            }));
             setPromotionPending(null);
         },
         [promotionPending, gameState]
@@ -178,14 +184,11 @@ export function useChessGame(options: UseChessGameOptions = {}) {
 
             const { newState, move } = makeMove(chess, gameState, from, to);
             if (move) {
-                const tc = TIME_CONTROLS[gameState.timeControl];
-                const increment = tc.increment * 1000;
-                const updatedState = {
+                setGameState((prev) => ({
                     ...newState,
-                    whiteTime: move.color === 'w' ? newState.whiteTime + increment : newState.whiteTime,
-                    blackTime: move.color === 'b' ? newState.blackTime + increment : newState.blackTime,
-                };
-                setGameState(updatedState);
+                    whiteTime: prev.whiteTime,
+                    blackTime: prev.blackTime,
+                }));
             } else {
                 setGameState((prev) => ({
                     ...prev,
