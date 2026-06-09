@@ -13,8 +13,8 @@ import styles from './online.module.css';
 
 export default function OnlinePage() {
     const {
-        phase, errorMsg, roomCode, myColor, gameState, promotionPending,
-        createGame, joinGame, handleSquareClick, handleDragStart, handleDragDrop,
+        phase, errorMsg, slow, roomCode, myColor, opponentConnected, gameState, promotionPending,
+        createGame, joinGame, retry, handleSquareClick, handleDragStart, handleDragDrop,
         handlePromotion, resign, rematch,
     } = useOnlineGame();
 
@@ -32,43 +32,62 @@ export default function OnlinePage() {
             <div className={styles.lobby}>
                 <a href="/" className={styles.logo}><span>♔</span> ChessCash</a>
                 <div className={styles.card}>
-                    <h1 className={styles.title}>Play a Friend</h1>
-                    <p className={styles.sub}>Create a game, share the code, and play live — phone to phone.</p>
+                    {phase === 'connecting' ? (
+                        <>
+                            <h1 className={styles.title}>Connecting…</h1>
+                            <div className={styles.spinner} />
+                            <p className={styles.status}>
+                                {slow
+                                    ? 'Waking up the game server — the free server naps when idle, this can take up to a minute. Hang tight…'
+                                    : 'Reaching the game server…'}
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h1 className={styles.title}>Play a Friend</h1>
+                            <p className={styles.sub}>Create a game, share the code, and play live — anywhere in the world.</p>
 
-                    <div className={styles.tcRow}>
-                        {(Object.entries(TIME_CONTROLS) as [TimeControl, typeof TIME_CONTROLS[TimeControl]][]).map(([key, t]) => (
-                            <button
-                                key={key}
-                                className={`${styles.tcBtn} ${tc === key ? styles.tcActive : ''}`}
-                                onClick={() => setTc(key)}
-                            >
-                                <span>{t.icon}</span>
-                                <span>{t.minutes}+{t.increment}</span>
+                            <div className={styles.tcRow}>
+                                {(Object.entries(TIME_CONTROLS) as [TimeControl, typeof TIME_CONTROLS[TimeControl]][]).map(([key, t]) => (
+                                    <button
+                                        key={key}
+                                        className={`${styles.tcBtn} ${tc === key ? styles.tcActive : ''}`}
+                                        onClick={() => setTc(key)}
+                                    >
+                                        <span>{t.icon}</span>
+                                        <span>{t.minutes}+{t.increment}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button className="btn btn-gold btn-lg" style={{ width: '100%' }} onClick={() => createGame(tc)}>
+                                ♟ Create Game
                             </button>
-                        ))}
-                    </div>
 
-                    <button className="btn btn-gold btn-lg" style={{ width: '100%' }} onClick={() => createGame(tc)}>
-                        ♟ Create Game
-                    </button>
+                            <div className={styles.divider}><span>or join</span></div>
 
-                    <div className={styles.divider}><span>or join</span></div>
+                            <div className={styles.joinRow}>
+                                <input
+                                    className={styles.codeInput}
+                                    placeholder="ENTER CODE"
+                                    maxLength={5}
+                                    value={joinCode}
+                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && joinCode.length === 5) joinGame(joinCode, tc); }}
+                                />
+                                <button className="btn btn-outline" disabled={joinCode.length < 5} onClick={() => joinGame(joinCode, tc)}>
+                                    Join
+                                </button>
+                            </div>
 
-                    <div className={styles.joinRow}>
-                        <input
-                            className={styles.codeInput}
-                            placeholder="ENTER CODE"
-                            maxLength={5}
-                            value={joinCode}
-                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                        />
-                        <button className="btn btn-outline" disabled={joinCode.length < 5} onClick={() => joinGame(joinCode)}>
-                            Join
-                        </button>
-                    </div>
-
-                    {phase === 'connecting' && <p className={styles.status}>Connecting…</p>}
-                    {phase === 'error' && <p className={styles.error}>{errorMsg}</p>}
+                            {phase === 'error' && (
+                                <div className={styles.errorBox}>
+                                    <p className={styles.error}>{errorMsg}</p>
+                                    <button className="btn btn-gold btn-sm" onClick={retry}>↻ Retry</button>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         );
@@ -76,17 +95,16 @@ export default function OnlinePage() {
 
     // ── Waiting for opponent ─────────────────────────────────────
     if (phase === 'waiting') {
-        const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
         return (
             <div className={styles.lobby}>
                 <a href="/" className={styles.logo}><span>♔</span> ChessCash</a>
                 <div className={styles.card}>
                     <h1 className={styles.title}>Waiting for opponent…</h1>
-                    <p className={styles.sub}>Have your friend open ChessCash → Play a Friend → enter this code:</p>
+                    <p className={styles.sub}>Have your friend open this site → Play a Friend → enter this code:</p>
                     <div
                         className={styles.bigCode}
                         onClick={() => {
-                            navigator.clipboard?.writeText(roomCode);
+                            navigator.clipboard?.writeText(roomCode).catch(() => {});
                             setCopied(true);
                         }}
                         title="Tap to copy"
@@ -95,7 +113,7 @@ export default function OnlinePage() {
                     </div>
                     <p className={styles.status}>{copied ? 'Code copied!' : 'Tap the code to copy'}</p>
                     <div className={styles.spinner} />
-                    <p className={styles.hint}>Both phones must be on the same Wi-Fi. They open: {shareUrl}</p>
+                    <p className={styles.hint}>They can be anywhere — same Wi-Fi not required.</p>
                 </div>
             </div>
         );
@@ -121,6 +139,11 @@ export default function OnlinePage() {
                 </div>
             </header>
 
+            {/* transient connection banners */}
+            {phase === 'playing' && !opponentConnected && !gameState.isGameOver && (
+                <div className={styles.banner}>⚠ Opponent lost connection — waiting for them to return…</div>
+            )}
+
             <main className={gameStyles.gameArea}>
                 <aside className={gameStyles.leftPanel}>
                     <GameClock
@@ -142,6 +165,15 @@ export default function OnlinePage() {
                 </aside>
 
                 <div className={gameStyles.boardArea}>
+                    {phase === 'reconnecting' && (
+                        <div className={gameStyles.overlay}>
+                            <div className={gameStyles.overlayCard}>
+                                <div className={styles.spinner} />
+                                <h2>Reconnecting…</h2>
+                                <p className={styles.status}>Hold on — getting you back into the game.</p>
+                            </div>
+                        </div>
+                    )}
                     {phase === 'opponent-left' && (
                         <div className={gameStyles.overlay}>
                             <div className={gameStyles.overlayCard}>

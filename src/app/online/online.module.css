@@ -121,6 +121,26 @@
     font-size: 0.9rem;
 }
 
+.errorBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    background: rgba(255, 107, 107, 0.08);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 12px;
+}
+
+.banner {
+    text-align: center;
+    padding: 10px 16px;
+    background: rgba(255, 180, 60, 0.14);
+    border-bottom: 1px solid rgba(255, 180, 60, 0.35);
+    color: #ffcf7a;
+    font-size: 0.9rem;
+}
+
 .bigCode {
     font-size: 3rem;
     font-weight: 800;
