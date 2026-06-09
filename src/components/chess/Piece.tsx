@@ -1,134 +1,39 @@
 /* ===================================================================
-   ChessCash — Chess Pieces SVG Component
-   Classic Staunton style, high-quality vector pieces
+   ChessCash — Chess Piece Component
+   Renders any piece from the piece-set registry as inline SVG.
    =================================================================== */
 
 'use client';
 
 import React from 'react';
+import { getPieceSet, type PieceCode } from '@/lib/piece-sets';
 
 interface PieceProps {
-    type: 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
-    color: 'w' | 'b';
-    size?: number;
+  type: 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
+  color: 'w' | 'b';
+  /** Piece set id from the registry; defaults to Classic Staunton. */
+  set?: string;
+  /** Pixel size; omit (or 0) to fill the parent container. */
+  size?: number;
+  shadow?: boolean;
 }
 
-const PIECE_PATHS: Record<string, { path: string; outline?: string }> = {
-    // WHITE KING
-    wk: {
-        path: `M 22.5,11.63 V 6 h -3 v 5.63 h -5.63 v 3 h 5.63 V 20.25 h 3 V 14.63 H 28.14 v -3 z
-           M 22.5,25.5 c 0,0 4.5,-7.5 3,-10.5 0,0 -1,-2.5 -3,-2.5 -2,0 -3,2.5 -3,2.5 -1.5,3 3,10.5 3,10.5
-           M 12.5,37 c 5.5,3.5 14.5,3.5 20,0 v -7 c 0,0 9,-4.5 6,-10.5 -4,-6.5 -13.5,-3.5 -16,4
-           V 27 l 0,0 c -2.5,-7.5 -12,-10.5 -16,-4 -3,6 6,10.5 6,10.5 v 7`,
-        outline: `M 22.5,11.63 V 6 M 20,8 h 5 M 22.5,25 c 0,0 4.5,-7.5 3,-10.5 0,0 -1,-2.5 -3,-2.5 -2,0 -3,2.5 -3,2.5 -1.5,3 3,10.5 3,10.5
-              M 12.5,37 c 5.5,3.5 14.5,3.5 20,0 v -7 c 0,0 9,-4.5 6,-10.5 -4,-6.5 -13.5,-3.5 -16,4 V 27
-              c -2.5,-7.5 -12,-10.5 -16,-4 -3,6 6,10.5 6,10.5 v 7
-              M 12.5,30 c 5.5,-3 14.5,-3 20,0 M 12.5,33.5 c 5.5,-3 14.5,-3 20,0`
-    },
-    // WHITE QUEEN
-    wq: {
-        path: `M 9,26 C 17.5,24.5 30,24.5 36,26 L 38.5,13.5 L 31,25 L 30.7,10.9 L 25.5,24.5
-           L 22.5,10 L 19.5,24.5 L 14.3,10.9 L 14,25 L 6.5,13.5 L 9,26 z
-           M 9,26 C 9,28 10.5,28.5 12.5,29.5 C 14.5,30.5 17.5,31 22.5,31
-           C 27.5,31 30.5,30.5 32.5,29.5 C 34.5,28.5 36,28 36,26
-           M 9,29 C 9,31 11,32.5 14,34 C 17,35.5 20,36 22.5,36
-           C 25,36 28,35.5 31,34 C 34,32.5 36,31 36,29
-           M 12.5,31.5 L 12.5,37 M 17.5,33 L 17.5,37.5 M 22.5,33.5 L 22.5,38
-           M 27.5,33 L 27.5,37.5 M 32.5,31.5 L 32.5,37
-           M 11.5,37 C 15,39 19,39.5 22.5,39.5 C 26,39.5 30,39 33.5,37`,
-    },
-    // WHITE ROOK
-    wr: {
-        path: `M 9,39 L 36,39 L 36,36 L 9,36 L 9,39 z
-           M 12.5,32 L 14,29.5 L 31,29.5 L 32.5,32 L 12.5,32 z
-           M 12,36 L 12,32 L 33,32 L 33,36 L 12,36 z
-           M 14,29.5 L 14,16.5 L 31,16.5 L 31,29.5 L 14,29.5 z
-           M 14,16.5 L 11,14 L 11,9 L 15,9 L 15,11 L 20,11 L 20,9 L 25,9 L 25,11
-           L 30,11 L 30,9 L 34,9 L 34,14 L 31,16.5 L 14,16.5 z`,
-    },
-    // WHITE BISHOP
-    wb: {
-        path: `M 9,36 C 12.39,35.03 19.11,36.43 22.5,34 C 25.89,36.43 32.61,35.03 36,36
-           C 36,36 37.65,36.54 39,38 C 38.32,38.97 37.35,38.99 36,38.5
-           C 32.61,37.53 25.89,38.96 22.5,37.5 C 19.11,38.96 12.39,37.53 9,38.5
-           C 7.65,38.99 6.68,38.97 6,38 C 7.35,36.54 9,36 9,36 z
-           M 15,32 C 17.5,34.5 27.5,34.5 30,32 C 30.5,30.5 30,30 30,30
-           C 30,27.5 27.5,26 27.5,26 C 33,24.5 33.5,14.5 22.5,10.5
-           C 11.5,14.5 12,24.5 17.5,26 C 17.5,26 15,27.5 15,30
-           C 15,30 14.5,30.5 15,32 z
-           M 25,8 a 2.5,2.5 0 1 1 -5,0 a 2.5,2.5 0 1 1 5,0 z`,
-        outline: `M 17.5,26 L 27.5,26 M 15,30 L 30,30 M 22.5,15.5 L 22.5,20.5 M 20,18 L 25,18`,
-    },
-    // WHITE KNIGHT
-    wn: {
-        path: `M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18
-           M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31
-           C 9.96,30.66 12.5,27.5 12.5,27.5 L 11.5,26 C 10,28 8.85,28.06 7.5,27.5
-           C 6.5,27 7.3,25.5 9.5,25 C 11.7,24.5 12.5,24.5 12.5,24.5
-           C 12.5,24.5 12.74,22.83 12,22.5 C 11.26,22.17 11,21.5 11,21.5
-           L 11.5,20 C 12,19.5 13.5,18.5 13.5,18.5 L 13.5,16 C 13.5,16 14.5,15 15.5,14.5
-           C 16.5,14 17.5,13 17.5,13 C 17.5,13 20,12.5 22,10`,
-    },
-    // WHITE PAWN
-    wp: {
-        path: `M 22.5,9 C 19.92,9 17.83,11.09 17.83,13.67 C 17.83,14.95 18.36,16.1 19.2,16.93
-           C 16.49,18.63 14.68,21.58 14.68,24.97 C 14.68,26.42 15,27.79 15.56,29.03
-           L 12,36.5 C 12,36.5 11.25,38 14,38.5 c 2.5,0.5 5.5,0.5 8.5,0.5
-           c 3,0 6,-0 8.5,-0.5 c 2.75,-0.5 2,-2 2,-2 L 31.44,29.03
-           C 32,27.79 32.32,26.42 32.32,24.97 C 32.32,21.58 30.51,18.63 27.8,16.93
-           C 28.64,16.1 29.17,14.95 29.17,13.67 C 29.17,11.09 27.08,9 22.5,9 z`,
-    },
-};
+function ChessPiece({ type, color, set = 'classic', size = 0, shadow = true }: PieceProps) {
+  const pieceSet = getPieceSet(set);
+  const markup = pieceSet.data.pieces[`${color}${type}` as PieceCode];
+  if (!markup) return null;
 
-// Black pieces use the same paths but different fills
-const BLACK_PIECE_KEYS: Record<string, string> = {
-    bk: 'wk',
-    bq: 'wq',
-    br: 'wr',
-    bb: 'wb',
-    bn: 'wn',
-    bp: 'wp',
-};
-
-export default function ChessPiece({ type, color, size = 45 }: PieceProps) {
-    const key = `${color}${type}`;
-    const pathKey = color === 'b' ? BLACK_PIECE_KEYS[key] : key;
-    const pieceData = PIECE_PATHS[pathKey];
-
-    if (!pieceData) return null;
-
-    const isWhite = color === 'w';
-    const fill = isWhite ? '#F5E6D3' : '#1A1410';
-    const stroke = isWhite ? '#3B1F0B' : '#3B1F0B';
-    const strokeWidth = isWhite ? 1.5 : 1.5;
-
-    return (
-        <svg
-            viewBox="0 0 45 45"
-            width={size}
-            height={size}
-            style={{
-                filter: `drop-shadow(1px 2px 3px rgba(0,0,0,0.4))`,
-                transition: 'transform var(--transition-piece, 200ms)',
-            }}
-        >
-            <g
-                fill={fill}
-                stroke={stroke}
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <path d={pieceData.path} />
-                {pieceData.outline && (
-                    <path
-                        d={pieceData.outline}
-                        fill="none"
-                        stroke={isWhite ? 'rgba(59,31,11,0.3)' : 'rgba(245,230,211,0.25)'}
-                        strokeWidth={1}
-                    />
-                )}
-            </g>
-        </svg>
-    );
+  return (
+    <svg
+      viewBox={pieceSet.data.viewBox}
+      width={size || '100%'}
+      height={size || '100%'}
+      style={shadow ? { filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.45))' } : undefined}
+      aria-hidden
+      focusable={false}
+      dangerouslySetInnerHTML={{ __html: markup }}
+    />
+  );
 }
+
+export default React.memo(ChessPiece);

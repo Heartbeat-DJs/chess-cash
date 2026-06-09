@@ -2,37 +2,63 @@
    ChessCash — Chess Board Styles
    =================================================================== */
 
-.boardWrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: boardGlow 6s ease-in-out infinite;
-}
-
-.boardBorder {
-    border: 6px solid #3B1F0B;
-    border-radius: 4px;
+.frame {
+    position: relative;
+    width: 100%;
+    border: 1px solid;
+    border-radius: 8px;
+    padding: clamp(6px, 1.4vw, 12px);
     box-shadow:
-        0 8px 40px rgba(0, 0, 0, 0.6),
-        inset 0 1px 0 rgba(197, 151, 59, 0.15),
-        0 0 0 1px rgba(197, 151, 59, 0.2);
-    background: #2A1808;
-    padding: 0;
+        0 12px 48px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(197, 151, 59, 0.18);
 }
 
-.boardMiddle {
-    display: flex;
-    align-items: stretch;
+/* Subtle texture overlays on the frame, per theme family */
+.frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.texture_wood::before {
+    background:
+        repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 7px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.2));
+}
+
+.texture_marble::before {
+    background:
+        radial-gradient(ellipse 120% 60% at 20% 10%, rgba(255, 255, 255, 0.1), transparent 50%),
+        radial-gradient(ellipse 90% 50% at 80% 90%, rgba(0, 0, 0, 0.18), transparent 55%);
+}
+
+.texture_matte::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.16));
+}
+
+.texture_felt::before {
+    background:
+        radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.07), transparent 70%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.22));
 }
 
 .board {
+    position: relative;
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    width: var(--board-size);
-    height: var(--board-size);
-    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 3px;
+    overflow: hidden;
     user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.25);
 }
 
 .square {
@@ -41,112 +67,141 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background-color 0.15s ease;
 }
 
-.square:hover {
-    filter: brightness(1.08);
+.highlightOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
 }
 
-.checkSquare {
-    animation: checkPulse 1.5s ease-in-out infinite;
-    background: radial-gradient(circle, rgba(255, 51, 51, 0.5), transparent 70%) !important;
+.checkOverlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(circle, rgba(255, 51, 51, 0.65) 18%, rgba(255, 51, 51, 0.25) 55%, transparent 75%);
+    animation: checkPulse 1.4s ease-in-out infinite;
 }
 
-/* ── Piece Container ───────────────────────────────────────────── */
-.pieceContainer {
-    width: 85%;
-    height: 85%;
+@keyframes checkPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+.markRing {
+    position: absolute;
+    inset: 5%;
+    border-radius: 50%;
+    border: 4px solid rgba(200, 60, 50, 0.85);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.hintRing {
+    position: absolute;
+    inset: 4%;
+    border-radius: 18%;
+    border: 3px dashed rgba(232, 197, 71, 0.95);
+    pointer-events: none;
+    z-index: 2;
+    animation: hintPulse 1s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.94); opacity: 0.7; }
+}
+
+/* ── Coordinates (inside squares, chess.com style) ─────────────── */
+.coordRank,
+.coordFile {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: clamp(7px, 1.4vw, 11px);
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0.9;
+}
+
+.coordRank {
+    top: 2px;
+    left: 3px;
+}
+
+.coordFile {
+    bottom: 1px;
+    right: 4px;
+}
+
+/* ── Pieces ────────────────────────────────────────────────────── */
+.piece {
+    width: 92%;
+    height: 92%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform var(--transition-piece);
     cursor: grab;
     z-index: 2;
 }
 
-.pieceContainer:active {
+.piece:active {
     cursor: grabbing;
 }
 
-.pieceContainer svg {
-    width: 100%;
-    height: 100%;
+.animPiece {
+    position: absolute;
+    width: 12.5%;
+    height: 12.5%;
+    z-index: 5;
+    pointer-events: none;
+    transition: transform 150ms cubic-bezier(0.3, 0.9, 0.4, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
 }
 
-/* ── Legal Move Indicators ─────────────────────────────────────── */
+/* ── Legal move indicators ─────────────────────────────────────── */
 .legalDot {
     position: absolute;
-    width: 26%;
-    height: 26%;
+    width: 30%;
+    height: 30%;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.2);
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.22) 100%);
     z-index: 1;
     pointer-events: none;
 }
 
 .captureRing {
     position: absolute;
-    inset: 4%;
+    inset: 3%;
     border-radius: 50%;
-    border: 3px solid rgba(0, 0, 0, 0.25);
+    border: 4px solid rgba(0, 0, 0, 0.26);
     z-index: 3;
     pointer-events: none;
 }
 
-/* ── Drag Ghost ────────────────────────────────────────────────── */
+/* ── Annotation arrows ─────────────────────────────────────────── */
+.arrowLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 6;
+    pointer-events: none;
+    opacity: 0.9;
+}
+
+/* ── Drag ghost ────────────────────────────────────────────────── */
 .dragGhost {
     position: absolute;
+    width: 13.5%;
+    height: 13.5%;
+    z-index: 10;
     pointer-events: none;
-    z-index: 100;
-    width: 60px;
-    height: 60px;
-    opacity: 0.9;
-    transform: scale(1.15);
-    filter: drop-shadow(3px 6px 10px rgba(0, 0, 0, 0.5));
-}
-
-/* ── Coordinates ───────────────────────────────────────────────── */
-.coordsTop,
-.coordsBottom {
-    display: flex;
-    justify-content: space-around;
-    padding: 4px 0;
-    margin-left: 24px;
-    margin-right: 24px;
-}
-
-.coordsLeft,
-.coordsRight {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    padding: 0 6px;
-}
-
-.coordLabel {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    text-align: center;
-    line-height: 1;
-}
-
-/* ── Responsive ────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .boardBorder {
-        border-width: 4px;
-    }
-
-    .coordsTop,
-    .coordsBottom {
-        margin-left: 20px;
-        margin-right: 20px;
-    }
-
-    .coordLabel {
-        font-size: 0.6rem;
-    }
+    transform: translate(-50%, -55%) scale(1.1);
+    filter: drop-shadow(3px 8px 12px rgba(0, 0, 0, 0.55));
 }

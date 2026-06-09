@@ -1,86 +1,46 @@
-/* ===================================================================
-   ChessCash — Move History Styles
-   =================================================================== */
-
 .wrapper {
+    display: flex;
+    flex-direction: column;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 280px;
+    min-height: 0;
 }
 
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface-raised);
 }
 
 .title {
     font-family: var(--font-display);
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
+    color: var(--text-gold);
 }
 
 .count {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--text-tertiary);
-    background: var(--bg-surface-raised);
-    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 8px;
     border-radius: var(--radius-full);
 }
 
 .moveList {
-    padding: 8px 12px;
-    max-height: 280px;
+    flex: 1;
     overflow-y: auto;
-    scrollbar-width: thin;
-}
-
-.movePair {
-    display: grid;
-    grid-template-columns: 32px 1fr 1fr;
-    gap: 4px;
-    padding: 4px 4px;
-    border-radius: var(--radius-sm);
-    transition: background var(--transition-fast);
-}
-
-.movePair:hover {
-    background: var(--bg-surface-hover);
-}
-
-.moveNumber {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
-    text-align: right;
-    padding-right: 4px;
-}
-
-.move {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-primary);
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-}
-
-.move:hover {
-    background: rgba(197, 151, 59, 0.12);
-    color: var(--gold-light);
+    padding: 8px 10px;
+    min-height: 80px;
+    max-height: 300px;
 }
 
 .empty {
@@ -88,25 +48,80 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 32px 16px;
+    gap: 6px;
+    height: 90px;
     color: var(--text-tertiary);
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    gap: 8px;
+    font-size: 0.85rem;
 }
 
 .emptyIcon {
-    font-size: 2rem;
-    opacity: 0.3;
+    font-size: 1.4rem;
+    opacity: 0.5;
 }
 
-@media (max-width: 1024px) {
-    .wrapper {
-        max-width: 100%;
-        max-height: 160px;
-    }
+.movePair {
+    display: grid;
+    grid-template-columns: 34px 1fr 1fr;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 0;
+}
 
-    .moveList {
-        max-height: 100px;
-    }
+.moveNumber {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+}
+
+.move {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.move:hover {
+    background: rgba(197, 151, 59, 0.12);
+}
+
+.moveActive {
+    background: rgba(197, 151, 59, 0.22);
+    color: var(--gold-shimmer);
+}
+
+.navRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface-raised);
+}
+
+.navBtn {
+    padding: 7px 0;
+    min-height: 40px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.navBtn:hover:not(:disabled) {
+    color: var(--gold-light);
+    border-color: var(--border-medium);
+}
+
+.navBtn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }

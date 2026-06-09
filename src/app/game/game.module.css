@@ -1,247 +1,500 @@
-.gamePage {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
+/* ===================================================================
+   ChessCash — Game Page (Pass & Play) — mobile-first
+   =================================================================== */
 
+/* ── Shared header ─────────────────────────────────────────────── */
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 32px;
+    gap: 10px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border-subtle);
-    background: var(--bg-secondary);
+    background: rgba(10, 10, 8, 0.85);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 90;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     text-decoration: none;
 }
 
 .logoIcon {
-    font-size: 1.8rem;
-    color: var(--gold);
+    font-size: 1.5rem;
+    color: var(--gold-light);
 }
 
 .logoText {
     font-family: var(--font-display);
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: 800;
+    font-size: 1.05rem;
     color: var(--text-primary);
-    letter-spacing: -0.02em;
+}
+
+.headerTag {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--text-gold);
 }
 
 .gameInfo {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    min-width: 0;
 }
 
 .badge {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
-    padding: 4px 12px;
-    background: rgba(197, 151, 59, 0.12);
-    border: 1px solid rgba(197, 151, 59, 0.25);
-    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
     color: var(--gold-light);
+    background: rgba(197, 151, 59, 0.12);
+    border: 1px solid rgba(197, 151, 59, 0.3);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
 }
 
 .liveBadge {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
+    letter-spacing: 0.08em;
     color: var(--emerald-light);
-    letter-spacing: 0.1em;
 }
 
 .liveDot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: var(--emerald-light);
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: livePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(64, 145, 108, 0.5); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 5px rgba(64, 145, 108, 0); }
+}
+
+.iconBtn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+    color: var(--gold-light);
+    border-color: var(--border-medium);
+}
+
+/* ── Setup screen ──────────────────────────────────────────────── */
+.setupPage {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.setupMain {
+    flex: 1;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 18px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
+.setupTitle h1 {
+    font-size: clamp(2rem, 6vw, 2.8rem);
+    margin-bottom: 6px;
+}
+
+.setupTitle p {
+    font-size: 1.05rem;
+}
+
+.setupSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.setupLabel {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+}
+
+.setupLabel em {
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-tertiary);
+}
+
+.stakeRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.stakeChip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 14px 6px;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.stakeAmount {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.stakePayout {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--emerald-light);
+}
+
+.tcGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.tcGroupHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tcGroupIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    font-size: 1.25rem;
+    color: var(--gold-light);
+    background: rgba(197, 151, 59, 0.1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.tcGroupText {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tcGroupLabel {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.tcGroupDesc {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--text-tertiary);
+    line-height: 1.3;
+}
+
+.tcRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 8px;
+}
+
+.tcChip {
+    padding: 12px 8px;
+    min-height: 46px;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--bg-surface-raised);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.chipActive {
+    border-color: var(--gold) !important;
+    background: rgba(197, 151, 59, 0.12) !important;
+    color: var(--gold-light) !important;
+    box-shadow: var(--shadow-gold);
+}
+
+.stakeChip:hover,
+.tcChip:hover {
+    border-color: var(--border-medium);
+}
+
+.startBtn {
+    margin-top: 8px;
+    width: 100%;
+}
+
+.customizeLink {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    align-self: center;
+}
+
+.customizeLink:hover {
+    color: var(--gold-light);
+}
+
+/* ── Game screen ───────────────────────────────────────────────── */
+.gamePage {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
 }
 
 .gameArea {
     flex: 1;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 32px;
-    padding: 32px;
-}
-
-.leftPanel,
-.rightPanel {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding-top: 20px;
+    gap: 10px;
+    padding: 10px 10px 24px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.leftPanel {
+    display: none;
+}
+
+.boardColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
 }
 
 .boardArea {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.controls {
+    display: none;
+}
+
+/* Mobile action bar */
+.actionBar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+}
+
+.actionBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.actionBtn small {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+}
+
+.actionBtn:hover {
+    border-color: var(--border-medium);
+}
+
+.actionDanger {
+    border-color: var(--crimson-light);
+    background: rgba(139, 26, 26, 0.2);
+}
+
+/* Draw offer banner */
+.drawBanner {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    animation: bannerIn 240ms cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+
+@keyframes bannerIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.drawActions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Wager card (desktop) */
 .wagerCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 20px 16px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 16px;
-    text-align: center;
 }
 
 .wagerLabel {
     font-family: var(--font-mono);
     font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     color: var(--text-tertiary);
-    letter-spacing: 0.15em;
-    margin-bottom: 4px;
 }
 
 .wagerAmount {
     font-family: var(--font-display);
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold-shimmer));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--gold-light);
+    text-shadow: 0 0 24px rgba(197, 151, 59, 0.35);
 }
 
 .wagerBreakdown {
     display: flex;
-    justify-content: space-between;
+    gap: 14px;
     font-family: var(--font-mono);
     font-size: 0.7rem;
-    color: var(--text-tertiary);
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
 }
 
-.controls {
-    display: flex;
-    gap: 8px;
-}
-
-.overlay {
+.demoTag {
     position: absolute;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(10, 10, 8, 0.8);
-    backdrop-filter: blur(4px);
-    border-radius: 4px;
-    animation: fadeIn 0.3s ease;
-}
-
-.overlayCard {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-medium);
-    border-radius: var(--radius-xl);
-    padding: 40px;
-    text-align: center;
-    box-shadow: var(--shadow-xl);
-}
-
-.overlayCard h2 {
-    font-family: var(--font-display);
-    font-size: 1.4rem;
-    margin-bottom: 24px;
-}
-
-.resultIcon {
-    font-size: 3.5rem;
-    margin-bottom: 12px;
-    animation: crownAppear 0.6s ease;
-}
-
-.overlayActions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.tcSelector {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-}
-
-.tcTitle {
-    font-family: var(--font-display);
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-tertiary);
+    top: 8px;
+    right: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    display: block;
-    margin-bottom: 10px;
-}
-
-.tcGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-}
-
-.tcBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px;
-    background: var(--bg-surface-hover);
+    color: var(--text-tertiary);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all var(--transition-fast);
+    border-radius: var(--radius-full);
+    padding: 1px 7px;
 }
 
-.tcBtn:hover {
-    border-color: var(--border-medium);
-    color: var(--text-primary);
-}
-
-.tcActive {
-    border-color: var(--gold) !important;
-    color: var(--gold-light) !important;
-    background: rgba(197, 151, 59, 0.08);
-}
-
-.tcLabel {
-    font-weight: 600;
-}
-
-@media (max-width: 1024px) {
+/* ── Desktop layout ────────────────────────────────────────────── */
+@media (min-width: 1024px) {
     .gameArea {
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        padding: 16px;
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr) 300px;
+        align-items: start;
+        gap: 22px;
+        max-width: 1260px;
+        padding: 22px 24px 40px;
     }
 
-    .leftPanel,
+    .leftPanel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: sticky;
+        top: 80px;
+    }
+
+    .boardColumn {
+        width: min(calc(100dvh - 250px), 640px);
+        margin: 0 auto;
+    }
+
     .rightPanel {
-        flex-direction: row;
+        position: sticky;
+        top: 80px;
+    }
+
+    .controls {
+        display: flex;
         flex-wrap: wrap;
-        justify-content: center;
-        padding-top: 0;
+        gap: 8px;
+    }
+
+    .actionBar {
+        display: none;
     }
 }

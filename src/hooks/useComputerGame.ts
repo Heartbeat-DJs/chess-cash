@@ -1,28 +1,38 @@
 /* ===================================================================
    ChessCash — useComputerGame Hook
-   Game state management for playing against the AI
+   Play vs the house AI: web-worker engine, hints, takebacks,
+   eval bar, draw negotiation, rating + stats recording.
    =================================================================== */
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import type { GameState, TimeControl, Square } from '@/types';
-import { TIME_CONTROLS } from '@/types';
 import {
   createInitialGameState,
-  selectSquare,
   makeMove,
   isPromotionMove,
   getLegalMovesForSquare,
+  stateAfterUndo,
+  incrementMs,
+  getOutcomeForPlayer,
 } from '@/lib/chess-engine';
-import { getAIThinkTime, type AIDifficulty } from '@/lib/chess-ai';
-import type { AIWorkerResponse } from '@/lib/chess-ai.worker';
+import { getAIThinkTime, getAIConfig, type AIDifficulty } from '@/lib/chess-ai';
+import type { AIWorkerRequest, AIWorkerResponse } from '@/lib/chess-ai.worker';
+import { playSound, playMoveSound } from '@/lib/sounds';
+import { recordGame, getRating } from '@/lib/stats';
+import type { GameRecord } from '@/types';
+
+type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
+type WorkerRequestInput = DistributiveOmit<AIWorkerRequest, 'id'>;
 
 interface UseComputerGameOptions {
   timeControl?: TimeControl;
   difficulty?: AIDifficulty;
   playerColor?: 'w' | 'b';
+  autoQueen?: boolean;
+  evalEnabled?: boolean;
   onGameOver?: (state: GameState) => void;
 }
 
@@ -31,6 +41,8 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
     timeControl = 'rapid_10',
     difficulty = 'club',
     playerColor = 'w',
+    autoQueen = false,
+    evalEnabled = false,
     onGameOver,
   } = options;
 
@@ -39,17 +51,60 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
   const lastTickRef = useRef<number>(Date.now());
   const aiThinkingRef = useRef(false);
   const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
+  const pendingRef = useRef(new Map<number, (resp: AIWorkerResponse) => void>());
+  const lowTimeWarnedRef = useRef(false);
+  const recordedRef = useRef<string | null>(null);
 
   const [gameState, setGameState] = useState<GameState>(() =>
-    createInitialGameState(crypto.randomUUID(), timeControl)
+    // 'waiting' until the page explicitly starts a game — no background
+    // clock or AI activity behind the opponent-select screen
+    createInitialGameState(crypto.randomUUID(), timeControl, 'waiting')
   );
   const [isAIThinking, setIsAIThinking] = useState(false);
-  const [promotionPending, setPromotionPending] = useState<{
-    from: Square;
-    to: Square;
-  } | null>(null);
+  const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
+  const [viewPly, setViewPly] = useState<number | null>(null);
+  const [hintMove, setHintMove] = useState<{ from: Square; to: Square } | null>(null);
+  const [evalScore, setEvalScore] = useState<number | null>(null);
+  const [drawStatus, setDrawStatus] = useState<'idle' | 'pending' | 'declined'>('idle');
+  const [lastRecord, setLastRecord] = useState<GameRecord | null>(null);
+  const [ratingDelta, setRatingDelta] = useState<number | null>(null);
 
-  // Timer logic — starts immediately, reads turn from latest state
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
+  // ── Worker setup with id-multiplexed responses ────────────────
+  useEffect(() => {
+    const worker = new Worker(new URL('../lib/chess-ai.worker.ts', import.meta.url));
+    const pending = pendingRef.current;
+    workerRef.current = worker;
+    worker.onmessage = (e: MessageEvent<AIWorkerResponse>) => {
+      const handler = pending.get(e.data.id);
+      if (handler) {
+        pending.delete(e.data.id);
+        handler(e.data);
+      }
+    };
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+      pending.clear();
+    };
+  }, []);
+
+  const sendRequest = useCallback(
+    (req: WorkerRequestInput, handler: (resp: AIWorkerResponse) => void): number | null => {
+      const worker = workerRef.current;
+      if (!worker) return null;
+      const id = ++requestIdRef.current;
+      pendingRef.current.set(id, handler);
+      worker.postMessage({ ...req, id });
+      return id;
+    },
+    []
+  );
+
+  // ── Clock ─────────────────────────────────────────────────────
   useEffect(() => {
     if (gameState.status !== 'active') return;
 
@@ -65,6 +120,12 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
         const newWhiteTime = isWhiteTurn ? Math.max(0, prev.whiteTime - delta) : prev.whiteTime;
         const newBlackTime = !isWhiteTurn ? Math.max(0, prev.blackTime - delta) : prev.blackTime;
 
+        const playerTime = playerColor === 'w' ? newWhiteTime : newBlackTime;
+        if (prev.turn === playerColor && playerTime < 10000 && !lowTimeWarnedRef.current) {
+          lowTimeWarnedRef.current = true;
+          playSound('lowTime');
+        }
+
         if (newWhiteTime <= 0 || newBlackTime <= 0) {
           return {
             ...prev,
@@ -79,32 +140,54 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
       });
     }, 100);
 
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [gameState.status]);
-
-  // Keep a ref to the latest gameState for reading inside async callbacks
-  const gameStateRef = useRef(gameState);
-  gameStateRef.current = gameState;
-
-  // Initialize Web Worker
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('../lib/chess-ai.worker.ts', import.meta.url)
-    );
     return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [gameState.status, playerColor]);
 
-  // Game over callback
+  // ── Game over: sounds + stats ─────────────────────────────────
   useEffect(() => {
-    if (gameState.isGameOver && onGameOver) {
-      onGameOver(gameState);
-    }
-  }, [gameState.isGameOver, onGameOver, gameState]);
+    if (!gameState.isGameOver) return;
+    setPromotionPending(null); // close any open promotion dialog
+    if (recordedRef.current === gameState.id) return;
+    recordedRef.current = gameState.id;
 
-  // AI move — triggers when it's the computer's turn
+    const outcome = getOutcomeForPlayer(gameState, playerColor);
+    playSound(outcome === 'win' ? 'victory' : outcome === 'loss' ? 'defeat' : 'draw');
+
+    if (gameState.moveCount >= 2) {
+      const ai = getAIConfig(difficulty);
+      const ratingBefore = getRating();
+      const record = recordGame({
+        mode: 'computer',
+        opponent: ai.label,
+        opponentRating: ai.ratingValue,
+        playerColor,
+        outcome,
+        result: gameState.result ?? 'abandoned',
+        moveCount: gameState.moveCount,
+        timeControl: gameState.timeControl,
+      });
+      setLastRecord(record);
+      setRatingDelta(record.ratingAfter - ratingBefore);
+    }
+
+    onGameOver?.(gameState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.isGameOver]);
+
+  // ── Eval bar ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!evalEnabled || gameState.isGameOver) return;
+    const fen = gameState.fen;
+    sendRequest({ kind: 'eval', fen, depth: 2 }, (resp) => {
+      if (resp.kind === 'eval' && gameStateRef.current.fen === fen) {
+        setEvalScore(resp.score);
+      }
+    });
+  }, [gameState.fen, gameState.isGameOver, evalEnabled, sendRequest]);
+
+  // ── AI move scheduling ────────────────────────────────────────
   useEffect(() => {
     const isComputerTurn = gameState.turn !== playerColor;
     if (!isComputerTurn || gameState.isGameOver || gameState.status !== 'active' || aiThinkingRef.current) return;
@@ -112,92 +195,49 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
     aiThinkingRef.current = true;
     setIsAIThinking(true);
 
-    // Read the AI's remaining clock time at turn start
     const aiRemainingTime = playerColor === 'w' ? gameState.blackTime : gameState.whiteTime;
-
-    // Calculate think time based on difficulty AND remaining clock
     let thinkTime = getAIThinkTime(difficulty, aiRemainingTime, gameState.moveCount);
-
-    // Safety: never use more than 90% of remaining clock for thinking
     thinkTime = Math.min(thinkTime, aiRemainingTime * 0.9);
 
-    const timer = setTimeout(() => {
-      const worker = workerRef.current;
-      if (!worker) return;
+    const gameId = gameState.id;
 
+    const timer = setTimeout(() => {
       const chess = chessRef.current;
       const latestState = gameStateRef.current;
       const latestAiTime = playerColor === 'w' ? latestState.blackTime : latestState.whiteTime;
+      const sentFen = chess.fen();
 
-      // Send work to the Web Worker (non-blocking!)
-      worker.postMessage({
-        fen: chess.fen(),
-        difficulty,
-        remainingTimeMs: latestAiTime,
-      });
-
-      // Handle the worker's response
-      worker.onmessage = (e: MessageEvent<AIWorkerResponse | null>) => {
-        if (!e.data) {
+      sendRequest(
+        { kind: 'move', fen: sentFen, difficulty, remainingTimeMs: latestAiTime },
+        (resp) => {
           aiThinkingRef.current = false;
           setIsAIThinking(false);
-          return;
+          if (resp.kind !== 'move' || !resp.move) return;
+          // Stale guard: game restarted or position changed since request
+          if (gameStateRef.current.id !== gameId) return;
+          if (chessRef.current.fen() !== sentFen) return;
+          if (gameStateRef.current.isGameOver) return;
+
+          const { from, to, promotion } = resp.move;
+          const current = gameStateRef.current;
+          const mover = current.turn;
+          const { newState, move } = makeMove(
+            chessRef.current,
+            current,
+            from as Square,
+            to as Square,
+            promotion as 'q' | 'r' | 'b' | 'n' | undefined
+          );
+          if (!move) return;
+          const inc = incrementMs(current.timeControl);
+          setGameState((prev) => ({
+            ...newState,
+            whiteTime: prev.whiteTime + (mover === 'w' ? inc : 0),
+            blackTime: prev.blackTime + (mover === 'b' ? inc : 0),
+          }));
+          playMoveSound(move.san, { isCheck: newState.isCheck, isCheckmate: newState.isCheckmate });
         }
-
-        try {
-          const { from, to, promotion } = e.data;
-          const moveResult = chess.move({ from, to, promotion: promotion as 'q' | 'r' | 'b' | 'n' | undefined });
-
-          if (moveResult) {
-            setGameState((prev) => {
-              const isCheck = chess.isCheck();
-              const isCheckmate = chess.isCheckmate();
-              const isStalemate = chess.isStalemate();
-              const isDraw = chess.isDraw();
-              const isGameOver = chess.isGameOver();
-
-              let result = prev.result;
-              let status = prev.status;
-              if (isCheckmate) {
-                result = prev.turn === 'w' ? 'white_wins' : 'black_wins';
-                status = 'completed';
-              } else if (isStalemate) {
-                result = 'stalemate';
-                status = 'completed';
-              } else if (isDraw) {
-                result = 'draw';
-                status = 'completed';
-              }
-
-              return {
-                ...prev,
-                fen: chess.fen(),
-                pgn: chess.pgn(),
-                moves: [...prev.moves, moveResult],
-                turn: chess.turn() as 'w' | 'b',
-                status,
-                result,
-                selectedSquare: null,
-                legalMoves: [],
-                lastMove: { from: moveResult.from as Square, to: moveResult.to as Square },
-                isCheck,
-                isCheckmate,
-                isStalemate,
-                isDraw,
-                isGameOver,
-                moveCount: prev.moveCount + 1,
-                whiteTime: prev.whiteTime,
-                blackTime: prev.blackTime,
-              };
-            });
-          }
-        } catch {
-          // Invalid move or game over
-        }
-
-        aiThinkingRef.current = false;
-        setIsAIThinking(false);
-      };
+      );
     }, thinkTime);
 
     return () => {
@@ -205,29 +245,61 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
       aiThinkingRef.current = false;
       setIsAIThinking(false);
     };
-  }, [gameState.turn, gameState.isGameOver, gameState.status, gameState.moveCount, playerColor, difficulty, timeControl]);
+    // clock times and moveCount intentionally omitted — they change every
+    // tick/move and the turn change is the real trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.turn, gameState.isGameOver, gameState.status, gameState.id, playerColor, difficulty, sendRequest]);
 
-  const handleSquareClick = useCallback(
-    (square: Square) => {
-      if (gameState.isGameOver || gameState.turn !== playerColor || isAIThinking) return;
-      const chess = chessRef.current;
+  // ── Player move application ───────────────────────────────────
+  const applyMove = useCallback(
+    (from: Square, to: Square, promotion?: 'q' | 'r' | 'b' | 'n') => {
+      const current = gameStateRef.current;
+      const mover = current.turn;
+      const { newState, move } = makeMove(chessRef.current, current, from, to, promotion);
+      if (!move) {
+        setGameState((prev) => ({ ...prev, selectedSquare: null, legalMoves: [] }));
+        return false;
+      }
+      const inc = incrementMs(current.timeControl);
+      setGameState((prev) => ({
+        ...newState,
+        whiteTime: prev.whiteTime + (mover === 'w' ? inc : 0),
+        blackTime: prev.blackTime + (mover === 'b' ? inc : 0),
+      }));
+      playMoveSound(move.san, { isCheck: newState.isCheck, isCheckmate: newState.isCheckmate });
+      setHintMove(null);
+      setViewPly(null);
+      return true;
+    },
+    []
+  );
 
-      if (gameState.selectedSquare && gameState.legalMoves.includes(square)) {
-        if (isPromotionMove(chess, gameState.selectedSquare, square)) {
-          setPromotionPending({ from: gameState.selectedSquare, to: square });
-          return;
-        }
-        const { newState, move } = makeMove(chess, gameState, gameState.selectedSquare, square);
-        if (move) {
-          setGameState((prev) => ({
-            ...newState,
-            whiteTime: prev.whiteTime,
-            blackTime: prev.blackTime,
-          }));
+  const tryMove = useCallback(
+    (from: Square, to: Square) => {
+      if (isPromotionMove(chessRef.current, from, to)) {
+        if (autoQueen) {
+          applyMove(from, to, 'q');
+        } else {
+          setPromotionPending({ from, to });
         }
         return;
       }
-      // Select/deselect square — preserve timer values from latest state
+      applyMove(from, to);
+    },
+    [applyMove, autoQueen]
+  );
+
+  const canInteract = !gameState.isGameOver && gameState.turn === playerColor && viewPly === null;
+
+  const handleSquareClick = useCallback(
+    (square: Square) => {
+      if (!canInteract) return;
+      const chess = chessRef.current;
+
+      if (gameState.selectedSquare && gameState.legalMoves.includes(square)) {
+        tryMove(gameState.selectedSquare, square);
+        return;
+      }
       const piece = chess.get(square);
       if (piece && piece.color === gameState.turn) {
         const legalMoves = getLegalMovesForSquare(chess, square);
@@ -236,27 +308,26 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
         setGameState((prev) => ({ ...prev, selectedSquare: null, legalMoves: [] }));
       }
     },
-    [gameState, playerColor, isAIThinking]
+    [canInteract, gameState.selectedSquare, gameState.legalMoves, gameState.turn, tryMove]
   );
 
   const handlePromotion = useCallback(
     (piece: 'q' | 'r' | 'b' | 'n') => {
       if (!promotionPending) return;
-      const chess = chessRef.current;
-      const { newState } = makeMove(chess, gameState, promotionPending.from, promotionPending.to, piece);
-      setGameState((prev) => ({
-        ...newState,
-        whiteTime: prev.whiteTime,
-        blackTime: prev.blackTime,
-      }));
+      applyMove(promotionPending.from, promotionPending.to, piece);
       setPromotionPending(null);
     },
-    [promotionPending, gameState]
+    [promotionPending, applyMove]
   );
+
+  const cancelPromotion = useCallback(() => {
+    setPromotionPending(null);
+    setGameState((prev) => ({ ...prev, selectedSquare: null, legalMoves: [] }));
+  }, []);
 
   const handleDragStart = useCallback(
     (square: Square) => {
-      if (gameState.isGameOver || gameState.turn !== playerColor || isAIThinking) return;
+      if (!canInteract) return;
       const chess = chessRef.current;
       const piece = chess.get(square);
       if (piece && piece.color === gameState.turn) {
@@ -264,61 +335,172 @@ export function useComputerGame(options: UseComputerGameOptions = {}) {
         setGameState((prev) => ({ ...prev, selectedSquare: square, legalMoves }));
       }
     },
-    [gameState.isGameOver, gameState.turn, playerColor, isAIThinking]
+    [canInteract, gameState.turn]
   );
 
   const handleDragDrop = useCallback(
     (from: Square, to: Square) => {
-      if (gameState.isGameOver || gameState.turn !== playerColor || isAIThinking) return;
-      const chess = chessRef.current;
-      if (isPromotionMove(chess, from, to)) {
-        setPromotionPending({ from, to });
+      if (!canInteract) return;
+      if (!gameStateRef.current.legalMoves.includes(to)) {
+        setGameState((prev) => ({ ...prev, selectedSquare: null, legalMoves: [] }));
         return;
       }
-      const { newState, move } = makeMove(chess, gameState, from, to);
-      if (move) {
-        setGameState((prev) => ({
-          ...newState,
-          whiteTime: prev.whiteTime,
-          blackTime: prev.blackTime,
-        }));
-      } else {
-        setGameState((prev) => ({ ...prev, selectedSquare: null, legalMoves: [] }));
-      }
+      tryMove(from, to);
     },
-    [gameState, playerColor, isAIThinking]
+    [canInteract, tryMove]
   );
 
-  const resign = useCallback(() => {
+  // ── Assists ───────────────────────────────────────────────────
+  const requestHint = useCallback(() => {
+    if (!canInteract) return;
+    const fen = chessRef.current.fen();
+    sendRequest({ kind: 'hint', fen }, (resp) => {
+      if (resp.kind === 'hint' && resp.move && gameStateRef.current.fen === fen) {
+        setHintMove({ from: resp.move.from as Square, to: resp.move.to as Square });
+        setTimeout(() => setHintMove(null), 4000);
+      }
+    });
+  }, [canInteract, sendRequest]);
+
+  const takeback = useCallback(() => {
+    if (!canInteract || isAIThinking) return;
+    const chess = chessRef.current;
+    const plies = Math.min(2, gameStateRef.current.moves.length);
+    if (plies === 0) return;
+    for (let i = 0; i < plies; i++) chess.undo();
     setGameState((prev) => ({
-      ...prev,
-      status: 'completed',
-      result: playerColor === 'w' ? 'black_wins' : 'white_wins',
-      isGameOver: true,
+      ...stateAfterUndo(chess, prev, plies),
+      whiteTime: prev.whiteTime,
+      blackTime: prev.blackTime,
     }));
+    setHintMove(null);
+    setViewPly(null);
+  }, [canInteract, isAIThinking]);
+
+  const offerDraw = useCallback(() => {
+    if (!canInteract || drawStatus !== 'idle') return;
+    setDrawStatus('pending');
+    const fen = chessRef.current.fen();
+    const offerGameId = gameStateRef.current.id;
+    const aiColor = playerColor === 'w' ? 'b' : 'w';
+    sendRequest({ kind: 'eval', fen, depth: 2 }, (resp) => {
+      if (resp.kind !== 'eval') return;
+      // Stale guard: the offer only applies to the position it was made in
+      if (gameStateRef.current.id !== offerGameId || gameStateRef.current.fen !== fen) {
+        setDrawStatus('idle');
+        return;
+      }
+      const aiScore = aiColor === 'w' ? resp.score : -resp.score;
+      const deadEqual = Math.abs(resp.score) < 40 && gameStateRef.current.moveCount > 50;
+      if (aiScore < -120 || deadEqual) {
+        setDrawStatus('idle');
+        setGameState((prev) =>
+          prev.isGameOver ? prev : { ...prev, status: 'completed', result: 'draw', isGameOver: true, drawOffer: prev.turn }
+        );
+      } else {
+        setDrawStatus('declined');
+        setTimeout(() => setDrawStatus('idle'), 2600);
+      }
+    });
+  }, [canInteract, drawStatus, playerColor, sendRequest]);
+
+  const resign = useCallback(() => {
+    setGameState((prev) => {
+      if (prev.isGameOver) return prev;
+      return {
+        ...prev,
+        status: 'completed',
+        result: playerColor === 'w' ? 'black_wins' : 'white_wins',
+        isGameOver: true,
+      };
+    });
   }, [playerColor]);
 
   const newGame = useCallback(
     (tc?: TimeControl) => {
       chessRef.current = new Chess();
       aiThinkingRef.current = false;
+      lowTimeWarnedRef.current = false;
+      pendingRef.current.clear(); // drop stale worker responses from the old game
       setIsAIThinking(false);
       setGameState(createInitialGameState(crypto.randomUUID(), tc || timeControl));
       setPromotionPending(null);
+      setHintMove(null);
+      setEvalScore(null);
+      setDrawStatus('idle');
+      setLastRecord(null);
+      setRatingDelta(null);
+      setViewPly(null);
+      playSound('gameStart');
     },
     [timeControl]
   );
+
+  // ── Move navigation ───────────────────────────────────────────
+  const livePly = gameState.fenHistory.length - 1;
+
+  const goToPly = useCallback(
+    (ply: number | null) => {
+      if (ply === null || ply >= livePly) setViewPly(null);
+      else setViewPly(Math.max(0, ply));
+    },
+    [livePly]
+  );
+
+  const goBack = useCallback(() => {
+    if (livePly === 0) return; // no moves yet — nothing to review
+    setViewPly((cur) => Math.max(0, (cur ?? livePly) - 1));
+  }, [livePly]);
+
+  const goForward = useCallback(() => {
+    setViewPly((cur) => {
+      if (cur === null) return null;
+      const next = cur + 1;
+      return next >= livePly ? null : next;
+    });
+  }, [livePly]);
+
+  const view = useMemo(() => {
+    const ply = viewPly ?? livePly;
+    const isLive = viewPly === null;
+    const lastMove = ply > 0
+      ? { from: gameState.moves[ply - 1].from as Square, to: gameState.moves[ply - 1].to as Square }
+      : null;
+    return {
+      ply,
+      isLive,
+      fen: isLive ? gameState.fen : gameState.fenHistory[ply],
+      lastMove: isLive ? gameState.lastMove : lastMove,
+    };
+  }, [viewPly, livePly, gameState.fen, gameState.fenHistory, gameState.moves, gameState.lastMove]);
 
   return {
     gameState,
     chess: chessRef.current,
     isAIThinking,
     promotionPending,
+    promotionColor: playerColor,
+    hintMove,
+    evalScore,
+    drawStatus,
+    lastRecord,
+    ratingDelta,
+    playerRating: typeof window !== 'undefined' ? getRating() : 1000,
+    view,
     handleSquareClick,
     handlePromotion,
+    cancelPromotion,
     handleDragStart,
     handleDragDrop,
+    requestHint,
+    takeback,
+    offerDraw,
     resign,
     newGame,
+    goToPly,
+    goBack,
+    goForward,
+    goToStart: () => goToPly(0),
+    goToLive: () => goToPly(null),
   };
 }

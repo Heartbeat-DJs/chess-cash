@@ -1,0 +1,67 @@
+.footer {
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    margin-top: auto;
+}
+
+.inner {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 48px 24px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+}
+
+.brand {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+}
+
+.brandIcon {
+    color: var(--gold-light);
+}
+
+.tagline {
+    font-family: var(--font-body);
+    font-style: italic;
+    color: var(--text-gold);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 24px;
+    margin: 8px 0;
+}
+
+.links a {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.links a:hover {
+    color: var(--gold-light);
+}
+
+.deadLink {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    cursor: default;
+}
+
+.disclaimer {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    max-width: 640px;
+    line-height: 1.6;
+    margin: 0;
+}

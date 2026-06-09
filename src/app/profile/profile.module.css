@@ -1,0 +1,662 @@
+/* ===================================================================
+   ChessCash — Profile Page — mobile-first
+   =================================================================== */
+
+.page {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main {
+    flex: 1;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+/* ── Loading ───────────────────────────────────────────────────── */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 96px 0;
+    color: var(--text-tertiary);
+    font-family: var(--font-body);
+    font-style: italic;
+}
+
+.loadingKing {
+    font-size: 2.4rem;
+    color: var(--gold);
+    animation: profilePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes profilePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ── Profile header card ───────────────────────────────────────── */
+.headerCard {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 24px 20px;
+    background: linear-gradient(155deg, var(--bg-surface-raised), var(--bg-secondary) 70%);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.headerCard::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(197, 151, 59, 0.14) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.headerIdentity {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.avatar {
+    width: 76px;
+    height: 76px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--gold-light);
+    background: radial-gradient(circle at 35% 30%, rgba(197, 151, 59, 0.22), rgba(59, 31, 11, 0.4));
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(245, 230, 211, 0.08);
+}
+
+.identityText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.memberName {
+    font-size: clamp(1.5rem, 5.5vw, 2rem);
+    margin: 0;
+}
+
+.memberSince {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.headerNumbers {
+    display: flex;
+    gap: 20px;
+}
+
+.numberBlock {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding-left: 16px;
+    border-left: 2px solid var(--border-subtle);
+}
+
+.ratingValue {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(2.2rem, 9vw, 3rem);
+    line-height: 1;
+    color: var(--gold-light);
+    text-shadow: 0 0 24px rgba(197, 151, 59, 0.35);
+}
+
+.creditsValue {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 6.5vw, 2.1rem);
+    line-height: 1.3;
+    color: var(--text-primary);
+}
+
+.numberLabel {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.provisional {
+    font-size: 0.62rem;
+}
+
+.demoTag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    background: rgba(245, 230, 211, 0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    padding: 1px 7px;
+}
+
+/* ── Section headings ──────────────────────────────────────────── */
+.sectionHead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.sectionSub {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.88rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+/* ── Stat tiles ────────────────────────────────────────────────── */
+.tilesGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+}
+
+.tile:hover {
+    border-color: var(--border-medium);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.tileValue {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 1.45rem;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+
+.tileLabel {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+}
+
+.tileWin .tileValue { color: var(--emerald-light); }
+.tileLoss .tileValue { color: var(--crimson-light); }
+.tileHot .tileValue { color: var(--gold-shimmer); }
+
+/* ── Rating chart ──────────────────────────────────────────────── */
+.chartCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 18px 16px 12px;
+}
+
+.chartCard .sectionHead {
+    margin-bottom: 8px;
+}
+
+.chart {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.chartLine {
+    fill: none;
+    stroke: var(--gold-light);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.chartGrid {
+    stroke: rgba(197, 151, 59, 0.14);
+    stroke-width: 1;
+    stroke-dasharray: 4 6;
+}
+
+.chartDot {
+    fill: var(--gold-shimmer);
+    stroke: var(--bg-primary);
+    stroke-width: 1.5;
+}
+
+.chartDotHalo {
+    fill: rgba(232, 197, 71, 0.18);
+}
+
+.chartLabel {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--text-tertiary);
+}
+
+.chartPlaceholder {
+    padding: 48px 20px;
+    text-align: center;
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text-tertiary);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+}
+
+/* ── Recent games table ────────────────────────────────────────── */
+.tableCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 4px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.gamesTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.gamesTable th {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    text-align: left;
+    padding: 12px 6px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    white-space: nowrap;
+}
+
+.gamesTable td {
+    padding: 11px 6px;
+    border-bottom: 1px solid rgba(197, 151, 59, 0.06);
+    vertical-align: middle;
+}
+
+.gamesTable tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.gamesTable tbody tr {
+    transition: background var(--transition-fast);
+}
+
+.gamesTable tbody tr:hover {
+    background: rgba(197, 151, 59, 0.04);
+}
+
+.thCenter { text-align: center; }
+.thRight { text-align: right; }
+.tdCenter { text-align: center; }
+.tdRight { text-align: right; }
+
+.oppCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+    border-radius: var(--radius-full);
+}
+
+.dotWin { background: var(--emerald-light); box-shadow: 0 0 6px rgba(64, 145, 108, 0.5); }
+.dotLoss { background: var(--crimson-light); box-shadow: 0 0 6px rgba(178, 34, 34, 0.5); }
+.dotDraw { background: var(--text-tertiary); }
+
+.oppText {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.oppName {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.84rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+}
+
+.oppRating {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--text-tertiary);
+}
+
+.colorCell {
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.reasonCell {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.monoCell {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.dateCell {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+}
+
+.earnPos { color: var(--emerald-light); }
+.earnNeg { color: var(--crimson-light); }
+
+.hideMobile {
+    display: none;
+}
+
+/* ── Style Cabinet ─────────────────────────────────────────────── */
+.cabinet {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px 16px;
+    transition: border-color var(--transition-base);
+}
+
+.cabinet:hover {
+    border-color: var(--border-medium);
+}
+
+.cabinetRow {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.cabinetItem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cabinetLabel {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+}
+
+.piecePreview {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 8px;
+    width: fit-content;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.themeSwatch {
+    display: grid;
+    grid-template-columns: repeat(2, 30px);
+    grid-template-rows: repeat(2, 30px);
+    width: fit-content;
+    border: 1.5px solid var(--border-medium);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.cabinetValue {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.cabinetBtn {
+    align-self: flex-start;
+}
+
+/* ── Empty state ───────────────────────────────────────────────── */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    padding: 56px 22px;
+    background: rgba(26, 24, 16, 0.55);
+    border: 1px dashed var(--border-medium);
+    border-radius: var(--radius-xl);
+}
+
+.emptyPiece {
+    font-size: 3rem;
+    line-height: 1;
+    color: var(--gold);
+    animation: profileFloat 4s ease-in-out infinite;
+}
+
+@keyframes profileFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.emptyTitle {
+    font-size: clamp(1.4rem, 5vw, 1.9rem);
+    margin: 0;
+    font-style: italic;
+    font-weight: 600;
+}
+
+.emptyText {
+    max-width: 420px;
+    font-size: 1.02rem;
+    margin: 0 0 8px;
+}
+
+/* ── Danger zone ───────────────────────────────────────────────── */
+.dangerZone {
+    text-align: center;
+    padding-top: 22px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.dangerLink {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: rgba(107, 93, 74, 0.5);
+    transition: color var(--transition-fast);
+    padding: 6px 10px;
+}
+
+.dangerLink:hover {
+    color: var(--crimson-light);
+    text-decoration-color: var(--crimson-light);
+}
+
+.dangerConfirm {
+    color: var(--crimson-light);
+    text-decoration-color: var(--crimson-light);
+    animation: profilePulse 1.2s ease-in-out infinite;
+}
+
+/* ── Tablet ────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+    .main {
+        padding: 40px 28px 80px;
+        gap: 36px;
+    }
+
+    .headerCard {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 32px 36px;
+        gap: 32px;
+    }
+
+    .avatar {
+        width: 92px;
+        height: 92px;
+        font-size: 3rem;
+    }
+
+    .headerNumbers {
+        gap: 44px;
+    }
+
+    .numberBlock {
+        flex: none;
+        padding-left: 28px;
+    }
+
+    .tilesGrid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+
+    .tileValue {
+        font-size: 1.7rem;
+    }
+
+    .hideMobile {
+        display: table-cell;
+    }
+
+    .gamesTable {
+        font-size: 0.9rem;
+    }
+
+    .gamesTable th {
+        padding: 14px 10px 10px;
+    }
+
+    .gamesTable td {
+        padding: 13px 10px;
+    }
+
+    .oppName {
+        font-size: 0.92rem;
+        max-width: 200px;
+    }
+
+    .tableCard {
+        padding: 4px 18px;
+    }
+
+    .chartCard {
+        padding: 24px 24px 16px;
+    }
+
+    .cabinet {
+        padding: 24px 28px;
+    }
+
+    .cabinetRow {
+        flex-direction: row;
+        align-items: center;
+        gap: 48px;
+    }
+
+    .cabinetBtn {
+        align-self: center;
+        margin-left: auto;
+    }
+
+    .sectionTitle {
+        font-size: 1.4rem;
+    }
+}
+
+/* ── Desktop ───────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+    .oppName {
+        max-width: 260px;
+    }
+
+    .emptyState {
+        padding: 80px 40px;
+    }
+}

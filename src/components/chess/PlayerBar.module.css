@@ -1,0 +1,118 @@
+.bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+}
+
+.bar.active {
+    border-color: var(--border-strong);
+    background: var(--bg-surface-hover);
+    box-shadow: 0 0 16px rgba(197, 151, 59, 0.12);
+}
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    font-size: 1.5rem;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+}
+
+.info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rating {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-tertiary);
+}
+
+.thinking {
+    display: inline-flex;
+    gap: 3px;
+    margin-left: 2px;
+}
+
+.thinking span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--gold-light);
+    animation: thinkDot 1.2s ease-in-out infinite;
+}
+
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinkDot {
+    0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+}
+
+.clock {
+    font-family: var(--font-mono);
+    font-size: 1.35rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.clockActive {
+    color: var(--text-primary);
+    background: rgba(197, 151, 59, 0.14);
+    box-shadow: inset 0 0 0 1px var(--border-medium);
+}
+
+.clockLow {
+    color: #FFB347;
+}
+
+.clockCritical {
+    color: #FF5252;
+    animation: clockBlink 1s steps(2) infinite;
+}
+
+@keyframes clockBlink {
+    50% { background: rgba(139, 26, 26, 0.35); }
+}
+
+@media (max-width: 480px) {
+    .bar { padding: 6px 8px; gap: 8px; }
+    .avatar { width: 32px; height: 32px; font-size: 1.2rem; }
+    .clock { font-size: 1.1rem; padding: 4px 10px; }
+}

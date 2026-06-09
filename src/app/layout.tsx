@@ -1,10 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { SettingsProvider } from "@/context/SettingsContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ChessCash — Play Chess for Real Money",
-  description: "Compete in head-to-head chess matches for real cash prizes. 100% skill-based. Legal in 40+ states. $1 and $2 games. Instant matchmaking.",
-  keywords: "chess, real money, cash games, skill gaming, chess betting, play chess online",
+  title: "ChessCash — The Gentleman's Club | Play Chess for Real Money",
+  description:
+    "Compete in head-to-head chess matches for real cash prizes. 100% skill-based. Premium boards, five house opponents, daily puzzles. Where skill meets stakes.",
+  keywords:
+    "chess, real money, cash games, skill gaming, chess puzzles, play chess online, chess vs computer",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0A0A08",
 };
 
 export default function RootLayout({
@@ -15,12 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#0A0A08" />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♔</text></svg>" />
+        <link
+          rel="icon"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♔</text></svg>"
+        />
       </head>
       <body>
-        {children}
+        <SettingsProvider>{children}</SettingsProvider>
       </body>
     </html>
   );

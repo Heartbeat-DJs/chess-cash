@@ -1,0 +1,778 @@
+/* ===================================================================
+   ChessCash — How It Works (page styles)
+   Mobile-first: base styles target ~375px, enhanced at 768px / 1024px.
+   =================================================================== */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page main {
+  flex: 1;
+  width: 100%;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding: var(--space-3xl) var(--space-lg) var(--space-2xl);
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  height: 640px;
+  background: radial-gradient(circle, rgba(197, 151, 59, 0.1) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.heroEyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: var(--space-md);
+  animation: fadeInUp 600ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.heroTitle {
+  position: relative;
+  font-size: clamp(2.4rem, 9vw, 4.2rem);
+  margin-bottom: var(--space-md);
+  animation: fadeInUp 600ms cubic-bezier(0.4, 0, 0.2, 1) 80ms both;
+}
+
+.heroSub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: clamp(1.25rem, 4.5vw, 1.6rem);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xl);
+  animation: fadeInUp 600ms cubic-bezier(0.4, 0, 0.2, 1) 160ms both;
+}
+
+.notice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--gold-light);
+  background: rgba(197, 151, 59, 0.08);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  animation: fadeInUp 600ms cubic-bezier(0.4, 0, 0.2, 1) 240ms both;
+}
+
+.noticeDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--gold-shimmer);
+  box-shadow: 0 0 8px rgba(232, 197, 71, 0.6);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+/* ── Sections (shared) ────────────────────────────────────────── */
+.section {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.sectionHead {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.eyebrow,
+.eyebrowSober {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: var(--space-sm);
+}
+
+.eyebrowSober {
+  color: var(--text-tertiary);
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-sm);
+}
+
+.sectionSub {
+  font-style: italic;
+  color: var(--text-secondary);
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+/* ── The Journey ──────────────────────────────────────────────── */
+.journey {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.step {
+  position: relative;
+  padding: var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base),
+    transform var(--transition-base);
+}
+
+.step:hover {
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md), var(--shadow-gold);
+  transform: translateY(-2px);
+}
+
+/* connecting thread between steps */
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(-1 * var(--space-xl));
+  transform: translateX(-50%);
+  width: 1px;
+  height: var(--space-xl);
+  background: linear-gradient(180deg, var(--border-medium), transparent);
+}
+
+.stepNum {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(3rem, 12vw, 4.5rem);
+  line-height: 1;
+  margin-bottom: var(--space-md);
+  background: linear-gradient(180deg, var(--gold-shimmer) 0%, var(--gold) 45%, var(--gold-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.stepDesc {
+  font-size: 1.05rem;
+}
+
+.stepExample {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  font-size: 1rem;
+  color: var(--text-primary);
+  background: rgba(197, 151, 59, 0.07);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-sm);
+}
+
+.stepExampleMark {
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+/* ── Why It's Legal ───────────────────────────────────────────── */
+.legalGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+.legalCard {
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base),
+    transform var(--transition-base);
+}
+
+.legalCard:hover {
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md), var(--shadow-gold);
+  transform: translateY(-3px);
+}
+
+.legalIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-md);
+  font-size: 1.6rem;
+  color: var(--gold);
+  background: rgba(197, 151, 59, 0.1);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+}
+
+.legalTitle {
+  margin-bottom: var(--space-sm);
+}
+
+.legalDesc {
+  font-size: 1rem;
+}
+
+.legalFootnote {
+  max-width: 640px;
+  margin: var(--space-xl) auto 0;
+  text-align: center;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+/* ── The House Rules (club charter) ───────────────────────────── */
+.charter {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+/* double-rule frame, like an engraved certificate */
+.charter::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.charterCrest {
+  text-align: center;
+  font-size: 1.8rem;
+  color: var(--gold);
+  margin-bottom: var(--space-lg);
+  text-shadow: 0 0 18px rgba(197, 151, 59, 0.4);
+}
+
+.charterItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-lg) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.charterNum {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--gold);
+}
+
+.charterTitle {
+  font-size: 1.25rem;
+  margin-bottom: var(--space-xs);
+}
+
+.charterDesc {
+  font-size: 1rem;
+}
+
+/* ── The House Rake ───────────────────────────────────────────── */
+.rakeCard {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.rakeRow {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.rakeChip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-md) var(--space-xs);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.rakeChipPot {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg, rgba(197, 151, 59, 0.12), rgba(197, 151, 59, 0.04));
+  box-shadow: var(--shadow-gold);
+}
+
+.rakeAmount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.rakeChipPot .rakeAmount {
+  color: var(--gold-shimmer);
+}
+
+.rakeLabel {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.rakeOp {
+  align-self: center;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+/* the gold bar: 90 / 10 split */
+.rakeBar {
+  display: flex;
+  height: 56px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-medium);
+  margin-bottom: var(--space-md);
+}
+
+.rakeWinner {
+  flex: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.rakeBarPct {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  color: var(--bg-primary);
+}
+
+.rakeHouse {
+  flex: 1;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg-surface-raised),
+    var(--bg-surface-raised) 5px,
+    var(--mahogany) 5px,
+    var(--mahogany) 10px
+  );
+  border-left: 1px solid var(--border-medium);
+}
+
+.rakeLegend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.legendItem strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.legendSwatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+}
+
+.legendGold {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
+}
+
+.legendDark {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg-surface-raised),
+    var(--bg-surface-raised) 3px,
+    var(--mahogany) 3px,
+    var(--mahogany) 6px
+  );
+}
+
+.rakeNote {
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-md);
+  margin: 0;
+}
+
+/* ── Responsible Gaming (deliberately sober) ──────────────────── */
+.soberCard {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(160, 139, 110, 0.18);
+  border-radius: var(--radius-lg);
+}
+
+.soberGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.soberItem {
+  padding-left: var(--space-md);
+  border-left: 2px solid rgba(160, 139, 110, 0.35);
+}
+
+.soberTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.soberDesc {
+  font-size: 0.98rem;
+  color: var(--text-secondary);
+}
+
+.helpline {
+  padding: var(--space-md);
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--text-secondary);
+  background: rgba(160, 139, 110, 0.07);
+  border: 1px solid rgba(160, 139, 110, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.helplineNumber {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.helplineNumber:hover {
+  color: var(--gold-light);
+}
+
+/* ── FAQ ──────────────────────────────────────────────────────── */
+.faqList {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.faqItem {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-base);
+}
+
+.faqItem:hover,
+.faqItem[open] {
+  border-color: var(--border-medium);
+}
+
+.faqQ {
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+  padding: var(--space-lg) var(--space-2xl) var(--space-lg) var(--space-lg);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  transition: color var(--transition-fast);
+  user-select: none;
+}
+
+.faqQ::-webkit-details-marker {
+  display: none;
+}
+
+.faqQ::after {
+  content: '+';
+  position: absolute;
+  right: var(--space-md);
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--gold);
+  transition: transform var(--transition-base);
+}
+
+.faqItem[open] .faqQ::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.faqQ:hover {
+  color: var(--gold-light);
+}
+
+.faqA {
+  padding: 0 var(--space-lg) var(--space-lg);
+  font-size: 1rem;
+  color: var(--text-secondary);
+  animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Final CTA ────────────────────────────────────────────────── */
+.cta {
+  position: relative;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-3xl) var(--space-lg) var(--space-4xl);
+  text-align: center;
+}
+
+.cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 80%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-medium), transparent);
+}
+
+.ctaOrnament {
+  display: block;
+  font-size: 1.2rem;
+  letter-spacing: 0.6em;
+  color: var(--gold);
+  margin-bottom: var(--space-lg);
+  text-shadow: 0 0 16px rgba(197, 151, 59, 0.35);
+}
+
+.ctaTitle {
+  font-size: clamp(2.2rem, 8vw, 3.4rem);
+  font-style: italic;
+  margin-bottom: var(--space-md);
+}
+
+.ctaSub {
+  margin-bottom: var(--space-xl);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Tablet — 768px+
+   ════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .hero {
+    padding: var(--space-4xl) var(--space-xl) var(--space-3xl);
+  }
+
+  .section {
+    padding: var(--space-3xl) var(--space-xl);
+  }
+
+  .sectionHead {
+    margin-bottom: var(--space-2xl);
+  }
+
+  /* journey: numeral beside the copy */
+  .step {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: var(--space-lg);
+    align-items: start;
+    padding: var(--space-xl);
+  }
+
+  .stepNum {
+    margin-bottom: 0;
+    text-align: right;
+  }
+
+  .legalGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+
+  .charter {
+    padding: var(--space-2xl) var(--space-2xl);
+  }
+
+  .charterItem {
+    flex-direction: row;
+    gap: var(--space-lg);
+  }
+
+  .charterNum {
+    flex-shrink: 0;
+    width: 56px;
+    text-align: right;
+    font-size: 2rem;
+  }
+
+  .rakeCard {
+    padding: var(--space-2xl);
+  }
+
+  .rakeRow {
+    gap: var(--space-md);
+  }
+
+  .rakeChip {
+    padding: var(--space-md);
+  }
+
+  .rakeAmount {
+    font-size: 1.3rem;
+  }
+
+  .rakeLabel {
+    font-size: 0.7rem;
+  }
+
+  .rakeBar {
+    height: 64px;
+  }
+
+  .rakeLegend {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--space-xl);
+  }
+
+  .soberGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xl);
+  }
+
+  .faqQ {
+    font-size: 1.18rem;
+    padding: var(--space-lg) var(--space-3xl) var(--space-lg) var(--space-lg);
+  }
+
+  .faqQ::after {
+    right: var(--space-lg);
+  }
+
+  .faqA {
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+    font-size: 1.05rem;
+  }
+
+  .cta {
+    padding: var(--space-4xl) var(--space-xl);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Desktop — 1024px+
+   ════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .hero {
+    padding-top: 120px;
+  }
+
+  .journey {
+    gap: var(--space-2xl);
+  }
+
+  .step:not(:last-child)::after {
+    bottom: calc(-1 * var(--space-2xl));
+    height: var(--space-2xl);
+  }
+
+  .step {
+    grid-template-columns: 150px 1fr;
+    gap: var(--space-xl);
+  }
+
+  .legalCard {
+    padding: var(--space-2xl) var(--space-xl);
+  }
+
+  .stepDesc,
+  .legalDesc,
+  .charterDesc {
+    font-size: 1.08rem;
+  }
+}

@@ -1,5 +1,6 @@
 /* ===================================================================
-   ChessCash — Move History Component
+   ChessCash — Move History
+   Clickable move list with navigation controls.
    =================================================================== */
 
 'use client';
@@ -10,27 +11,47 @@ import styles from './MoveHistory.module.css';
 
 interface MoveHistoryProps {
     moves: Move[];
-    currentMoveIndex?: number;
+    /** Currently viewed ply (1-based: ply 1 = after White's first move). */
+    currentPly?: number;
+    isLive?: boolean;
+    onSelectPly?: (ply: number) => void;
+    onStart?: () => void;
+    onBack?: () => void;
+    onForward?: () => void;
+    onLive?: () => void;
 }
 
-export default function MoveHistory({ moves }: MoveHistoryProps) {
+export default function MoveHistory({
+    moves,
+    currentPly,
+    isLive = true,
+    onSelectPly,
+    onStart,
+    onBack,
+    onForward,
+    onLive,
+}: MoveHistoryProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (scrollRef.current) {
+        if (scrollRef.current && isLive) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [moves.length]);
+    }, [moves.length, isLive]);
 
-    // Group moves into pairs (white + black)
-    const movePairs: { number: number; white: Move; black?: Move }[] = [];
+    const movePairs: { number: number; white: Move; whitePly: number; black?: Move; blackPly?: number }[] = [];
     for (let i = 0; i < moves.length; i += 2) {
         movePairs.push({
             number: Math.floor(i / 2) + 1,
             white: moves[i],
+            whitePly: i + 1,
             black: moves[i + 1],
+            blackPly: moves[i + 1] ? i + 2 : undefined,
         });
     }
+
+    const activePly = isLive ? moves.length : currentPly;
+    const hasNav = Boolean(onBack || onForward);
 
     return (
         <div className={styles.wrapper}>
@@ -48,14 +69,32 @@ export default function MoveHistory({ moves }: MoveHistoryProps) {
                     movePairs.map((pair) => (
                         <div key={pair.number} className={styles.movePair}>
                             <span className={styles.moveNumber}>{pair.number}.</span>
-                            <span className={styles.move}>{pair.white.san}</span>
+                            <button
+                                className={`${styles.move} ${activePly === pair.whitePly ? styles.moveActive : ''}`}
+                                onClick={() => onSelectPly?.(pair.whitePly)}
+                            >
+                                {pair.white.san}
+                            </button>
                             {pair.black && (
-                                <span className={styles.move}>{pair.black.san}</span>
+                                <button
+                                    className={`${styles.move} ${activePly === pair.blackPly ? styles.moveActive : ''}`}
+                                    onClick={() => pair.blackPly && onSelectPly?.(pair.blackPly)}
+                                >
+                                    {pair.black.san}
+                                </button>
                             )}
                         </div>
                     ))
                 )}
             </div>
+            {hasNav && (
+                <div className={styles.navRow}>
+                    <button className={styles.navBtn} onClick={onStart} aria-label="First move" disabled={moves.length === 0}>⏮</button>
+                    <button className={styles.navBtn} onClick={onBack} aria-label="Previous move" disabled={moves.length === 0}>◀</button>
+                    <button className={styles.navBtn} onClick={onForward} aria-label="Next move" disabled={isLive}>▶</button>
+                    <button className={styles.navBtn} onClick={onLive} aria-label="Latest move" disabled={isLive}>⏭</button>
+                </div>
+            )}
         </div>
     );
 }

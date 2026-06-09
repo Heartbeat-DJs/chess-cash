@@ -1,0 +1,151 @@
+.nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 10, 8, 0.88);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.inner {
+    max-width: 1240px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.brandIcon {
+    font-size: 1.9rem;
+    color: var(--gold-light);
+    filter: drop-shadow(0 0 8px rgba(197, 151, 59, 0.4));
+}
+
+.brandText {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.brandName {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.brandTag {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.68rem;
+    color: var(--text-gold);
+    letter-spacing: 0.06em;
+}
+
+.links {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+}
+
+.link {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.link:hover {
+    color: var(--text-primary);
+}
+
+.linkActive {
+    color: var(--gold-light);
+}
+
+/* ── Hamburger ─────────────────────────────────────────────────── */
+.burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 42px;
+    height: 42px;
+    padding: 9px;
+    background: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.burger span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: var(--gold-light);
+    border-radius: 2px;
+    transition: all 220ms ease;
+}
+
+.burgerOpen span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.burgerOpen span:nth-child(2) {
+    opacity: 0;
+}
+
+.burgerOpen span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+.mobileMenu {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    .links {
+        display: none;
+    }
+
+    .burger {
+        display: flex;
+    }
+
+    .mobileMenu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 24px 24px;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border-medium);
+        height: calc(100dvh - 67px);
+        overflow-y: auto;
+        animation: menuIn 220ms ease;
+    }
+
+    @keyframes menuIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mobileLink {
+        padding: 16px 8px;
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mobileCta {
+        margin-top: 20px;
+    }
+}

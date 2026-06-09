@@ -1,0 +1,9 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'The Game Room — ChessCash',
+};
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return children;
+}

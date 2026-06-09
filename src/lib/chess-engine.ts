@@ -3,23 +3,27 @@
    =================================================================== */
 
 import { Chess } from 'chess.js';
-import type { GameState, TimeControl, Square, Move, PieceColor } from '@/types';
+import type { GameState, TimeControl, Square, Move, PieceColor, GameOutcome } from '@/types';
 import { TIME_CONTROLS } from '@/types';
+
+export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 export function createInitialGameState(
     gameId: string,
-    timeControl: TimeControl = 'blitz_3'
+    timeControl: TimeControl = 'blitz_3',
+    status: GameState['status'] = 'active'
 ): GameState {
     const tc = TIME_CONTROLS[timeControl];
     const timeMs = tc.minutes * 60 * 1000;
 
     return {
         id: gameId,
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        fen: START_FEN,
         pgn: '',
         moves: [],
+        fenHistory: [START_FEN],
         turn: 'w',
-        status: 'active',
+        status,
         result: null,
         selectedSquare: null,
         legalMoves: [],
@@ -33,12 +37,18 @@ export function createInitialGameState(
         blackTime: timeMs,
         timeControl,
         moveCount: 0,
+        drawOffer: null,
     };
 }
 
 export function getLegalMovesForSquare(chess: Chess, square: Square): Square[] {
     const moves = chess.moves({ square, verbose: true });
     return moves.map((m) => m.to as Square);
+}
+
+/** Milliseconds of increment for a time control. */
+export function incrementMs(timeControl: TimeControl): number {
+    return TIME_CONTROLS[timeControl].increment * 1000;
 }
 
 export function makeMove(
@@ -48,6 +58,11 @@ export function makeMove(
     to: Square,
     promotion?: 'q' | 'r' | 'b' | 'n'
 ): { newState: GameState; move: Move | null } {
+    // A finished game accepts no more moves (e.g. a promotion confirmed
+    // after the flag fell would otherwise resurrect a completed game)
+    if (state.isGameOver || state.status === 'completed') {
+        return { newState: state, move: null };
+    }
     try {
         const move = chess.move({ from, to, promotion: promotion || 'q' });
         if (!move) {
@@ -61,7 +76,8 @@ export function makeMove(
         const isGameOver = chess.isGameOver();
 
         let result = state.result;
-        let status = state.status;
+        // First move on a waiting board starts the game (and its clocks)
+        let status: GameState['status'] = state.status === 'waiting' ? 'active' : state.status;
 
         if (isCheckmate) {
             result = state.turn === 'w' ? 'white_wins' : 'black_wins';
@@ -79,6 +95,7 @@ export function makeMove(
             fen: chess.fen(),
             pgn: chess.pgn(),
             moves: [...state.moves, move],
+            fenHistory: [...state.fenHistory, chess.fen()],
             turn: chess.turn() as PieceColor,
             status,
             result,
@@ -91,6 +108,7 @@ export function makeMove(
             isDraw,
             isGameOver,
             moveCount: state.moveCount + 1,
+            drawOffer: null, // any move cancels an open draw offer
         };
 
         return { newState, move };
@@ -99,34 +117,30 @@ export function makeMove(
     }
 }
 
-export function selectSquare(
-    chess: Chess,
-    state: GameState,
-    square: Square
-): GameState {
-    const piece = chess.get(square);
-
-    // If clicking on own piece, select it and show legal moves
-    if (piece && piece.color === state.turn) {
-        const legalMoves = getLegalMovesForSquare(chess, square);
-        return {
-            ...state,
-            selectedSquare: square,
-            legalMoves,
-        };
-    }
-
-    // If a piece is selected and clicking on a legal move, make the move
-    if (state.selectedSquare && state.legalMoves.includes(square)) {
-        const { newState } = makeMove(chess, state, state.selectedSquare, square);
-        return newState;
-    }
-
-    // Otherwise, deselect
+/** Rebuild a GameState from a chess instance after an undo (takeback). */
+export function stateAfterUndo(chess: Chess, state: GameState, plies: number): GameState {
+    const moves = state.moves.slice(0, Math.max(0, state.moves.length - plies));
+    const fenHistory = state.fenHistory.slice(0, Math.max(1, state.fenHistory.length - plies));
+    const last = moves[moves.length - 1];
     return {
         ...state,
+        fen: chess.fen(),
+        pgn: chess.pgn(),
+        moves,
+        fenHistory,
+        turn: chess.turn() as PieceColor,
+        status: 'active',
+        result: null,
         selectedSquare: null,
         legalMoves: [],
+        lastMove: last ? { from: last.from as Square, to: last.to as Square } : null,
+        isCheck: chess.isCheck(),
+        isCheckmate: false,
+        isStalemate: false,
+        isDraw: false,
+        isGameOver: false,
+        moveCount: moves.length,
+        drawOffer: null,
     };
 }
 
@@ -151,7 +165,7 @@ export function formatTime(ms: number): string {
 }
 
 export function formatTimeDetailed(ms: number): string {
-    if (ms <= 0) return '0:00.0';
+    if (ms <= 0) return '0.0';
     const totalTenths = Math.ceil(ms / 100);
     const minutes = Math.floor(totalTenths / 600);
     const seconds = Math.floor((totalTenths % 600) / 10);
@@ -163,20 +177,26 @@ export function formatTimeDetailed(ms: number): string {
     return `${seconds}.${tenths}`;
 }
 
-export function getMoveNotation(move: Move): string {
-    if (move.san) return move.san;
-    return `${move.from}-${move.to}`;
-}
-
 export function getGameResultText(state: GameState): string {
     if (!state.isGameOver) return '';
     switch (state.result) {
-        case 'white_wins': return state.isCheckmate ? 'Checkmate — White wins!' : 'White wins!';
-        case 'black_wins': return state.isCheckmate ? 'Checkmate — Black wins!' : 'Black wins!';
-        case 'draw': return 'Draw by agreement';
-        case 'stalemate': return 'Stalemate — Draw!';
-        case 'timeout': return `${state.turn === 'w' ? 'Black' : 'White'} wins on time!`;
-        case 'resignation': return `${state.turn === 'w' ? 'Black' : 'White'} wins by resignation!`;
+        case 'white_wins': return state.isCheckmate ? 'Checkmate — White wins' : 'White wins';
+        case 'black_wins': return state.isCheckmate ? 'Checkmate — Black wins' : 'Black wins';
+        case 'draw': return state.drawOffer !== null ? 'Draw by agreement' : 'Draw';
+        case 'stalemate': return 'Stalemate — Draw';
+        case 'timeout': return `${state.turn === 'w' ? 'Black' : 'White'} wins on time`;
+        case 'resignation': return `${state.turn === 'w' ? 'Black' : 'White'} wins by resignation`;
         default: return 'Game Over';
     }
+}
+
+/** Outcome from a given player's perspective. */
+export function getOutcomeForPlayer(state: GameState, playerColor: PieceColor): GameOutcome {
+    if (state.result === 'white_wins') return playerColor === 'w' ? 'win' : 'loss';
+    if (state.result === 'black_wins') return playerColor === 'b' ? 'win' : 'loss';
+    if (state.result === 'timeout' || state.result === 'resignation') {
+        // the side to move flagged / resigned
+        return state.turn === playerColor ? 'loss' : 'win';
+    }
+    return 'draw';
 }

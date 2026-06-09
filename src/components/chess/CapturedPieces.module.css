@@ -1,0 +1,22 @@
+.row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    min-height: 18px;
+    gap: 0;
+}
+
+.piece {
+    display: inline-flex;
+    align-items: center;
+    margin-right: -6px;
+    opacity: 0.92;
+}
+
+.advantage {
+    margin-left: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-gold);
+}
