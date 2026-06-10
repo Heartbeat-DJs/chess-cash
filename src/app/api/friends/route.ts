@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return handleApi(async () => {
     const user = await requireUser();
-    return listFriends(user.id);
+    return await listFriends(user.id);
   });
 }
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   return handleApi(async () => {
     const user = await requireUser();
     const { username } = await req.json();
-    const status = sendFriendRequest(user.id, String(username ?? ''));
+    const status = await sendFriendRequest(user.id, String(username ?? ''));
     return { status };
   });
 }

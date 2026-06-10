@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const user = await requireUser();
     const { id } = await params;
     const { from, to, promotion } = await req.json();
-    const game = applyMove(id, user.id, {
+    const game = await applyMove(id, user.id, {
       from: String(from ?? ''),
       to: String(to ?? ''),
       promotion: promotion ? String(promotion) : undefined,

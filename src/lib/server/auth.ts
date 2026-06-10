@@ -1,13 +1,13 @@
 /* ===================================================================
    ChessCash — Auth Service
-   Username + password (bcrypt), opaque session tokens in SQLite,
+   Username + password (bcrypt), opaque session tokens in libSQL,
    httpOnly cookie. No external auth provider needed.
    =================================================================== */
 
 import { randomBytes, randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
-import { getDb } from './db';
+import { queryOne, run } from './db';
 
 const SESSION_COOKIE = 'chesscash_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -40,12 +40,12 @@ function toPublic(row: UserRow): PublicUser {
   return {
     id: row.id,
     username: row.username,
-    credits: row.credits,
-    rating: row.rating,
-    gamesPlayed: row.games_played,
-    wins: row.wins,
-    losses: row.losses,
-    draws: row.draws,
+    credits: Number(row.credits),
+    rating: Number(row.rating),
+    gamesPlayed: Number(row.games_played),
+    wins: Number(row.wins),
+    losses: Number(row.losses),
+    draws: Number(row.draws),
   };
 }
 
@@ -65,26 +65,25 @@ export async function registerUser(username: string, password: string): Promise<
     throw new AuthError('Password must be at least 6 characters.');
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = await queryOne('SELECT id FROM users WHERE username = ?', [username]);
   if (existing) {
     throw new AuthError('That name is already taken at the club.', 409);
   }
 
   const id = randomUUID();
   const hash = bcrypt.hashSync(password, 10);
-  db.prepare(
-    'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)'
-  ).run(id, username, hash, Date.now());
+  await run(
+    'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
+    [id, username, hash, Date.now()]
+  );
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow;
+  const user = (await queryOne<UserRow>('SELECT * FROM users WHERE id = ?', [id]))!;
   await createSession(id);
   return toPublic(user);
 }
 
 export async function loginUser(username: string, password: string): Promise<PublicUser> {
-  const db = getDb();
-  const row = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as UserRow | undefined;
+  const row = await queryOne<UserRow>('SELECT * FROM users WHERE username = ?', [username]);
   if (!row || !bcrypt.compareSync(password, row.password_hash)) {
     throw new AuthError('Invalid name or password.', 401);
   }
@@ -93,14 +92,13 @@ export async function loginUser(username: string, password: string): Promise<Pub
 }
 
 async function createSession(userId: string) {
-  const db = getDb();
   const token = randomBytes(32).toString('hex');
   const now = Date.now();
-  db.prepare(
-    'INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
-  ).run(token, userId, now, now + SESSION_TTL_MS);
-  // opportunistic cleanup
-  db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(now);
+  await run(
+    'INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+    [token, userId, now, now + SESSION_TTL_MS]
+  );
+  await run('DELETE FROM sessions WHERE expires_at < ?', [now]);
 
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
@@ -116,7 +114,7 @@ export async function logoutUser() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (token) {
-    getDb().prepare('DELETE FROM sessions WHERE token = ?').run(token);
+    await run('DELETE FROM sessions WHERE token = ?', [token]);
     jar.delete(SESSION_COOKIE);
   }
 }
@@ -127,14 +125,11 @@ export async function getSessionUser(): Promise<PublicUser | null> {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token = ? AND s.expires_at > ?`
-    )
-    .get(token, Date.now()) as UserRow | undefined;
-
+  const row = await queryOne<UserRow>(
+    `SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token = ? AND s.expires_at > ?`,
+    [token, Date.now()]
+  );
   return row ? toPublic(row) : null;
 }
 
@@ -145,7 +140,7 @@ export async function requireUser(): Promise<PublicUser> {
   return user;
 }
 
-export function getUserById(id: string): PublicUser | null {
-  const row = getDb().prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+export async function getUserById(id: string): Promise<PublicUser | null> {
+  const row = await queryOne<UserRow>('SELECT * FROM users WHERE id = ?', [id]);
   return row ? toPublic(row) : null;
 }

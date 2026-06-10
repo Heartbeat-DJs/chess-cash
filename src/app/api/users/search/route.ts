@@ -10,6 +10,6 @@ export async function GET(req: NextRequest) {
   return handleApi(async () => {
     const user = await requireUser();
     const q = req.nextUrl.searchParams.get('q') ?? '';
-    return { users: searchMembers(user.id, q) };
+    return { users: await searchMembers(user.id, q) };
   });
 }

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   return handleApi(async () => {
     const user = await requireUser();
     const { timeControl, stake, color, toUsername } = await req.json();
-    const challenge = createChallenge(
+    const challenge = await createChallenge(
       user.id,
       String(timeControl ?? ''),
       Number(stake ?? 0),
@@ -24,6 +24,6 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return handleApi(async () => {
     const user = await requireUser();
-    return { challenges: listMyChallenges(user.id) };
+    return { challenges: await listMyChallenges(user.id) };
   });
 }

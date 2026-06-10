@@ -8,6 +8,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return handleApi(async () => {
     const user = await requireUser();
-    return listMyGames(user.id);
+    return await listMyGames(user.id);
   });
 }

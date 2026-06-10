@@ -13,9 +13,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     const user = await requireUser();
     const { id } = await params;
     const { action } = await req.json();
-    if (action === 'accept') respondFriendRequest(user.id, id, true);
-    else if (action === 'decline') respondFriendRequest(user.id, id, false);
-    else if (action === 'remove') removeFriend(user.id, id);
+    if (action === 'accept') await respondFriendRequest(user.id, id, true);
+    else if (action === 'decline') await respondFriendRequest(user.id, id, false);
+    else if (action === 'remove') await removeFriend(user.id, id);
     else throw new AuthError('Unknown action.');
     return { ok: true };
   });

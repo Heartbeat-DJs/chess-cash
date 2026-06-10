@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return handleApi(async () => {
     const user = await requireUser();
-    const rows = listIncomingChallenges(user.id);
+    const rows = await listIncomingChallenges(user.id);
     return {
       challenges: rows.map((c) => ({
         code: c.code,

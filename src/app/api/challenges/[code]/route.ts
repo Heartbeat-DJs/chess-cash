@@ -11,7 +11,7 @@ type Params = { params: Promise<{ code: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   return handleApi(async () => {
     const { code } = await params;
-    const challenge = getChallenge(code);
+    const challenge = await getChallenge(code);
     if (!challenge) return { challenge: null };
     return {
       challenge: {
@@ -32,7 +32,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
   return handleApi(async () => {
     const user = await requireUser();
     const { code } = await params;
-    const game = acceptChallenge(code, user.id);
+    const game = await acceptChallenge(code, user.id);
     return { game };
   });
 }
@@ -41,7 +41,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   return handleApi(async () => {
     const user = await requireUser();
     const { code } = await params;
-    cancelChallenge(code, user.id);
+    await cancelChallenge(code, user.id);
     return { ok: true };
   });
 }

@@ -1,23 +1,38 @@
 /* ===================================================================
-   ChessCash — Online Game Service
+   ChessCash — Online Game Service (libSQL / Turso)
    Server-authoritative chess: every move validated with chess.js,
    clocks settled from timestamps, credits + Elo settled on game end.
+   Race-sensitive flows (accept, move, action) use interactive
+   transactions; reads use the pooled client.
    =================================================================== */
 
 import { randomUUID, randomInt } from 'crypto';
 import { Chess } from 'chess.js';
+import type { Client, Transaction, InArgs } from '@libsql/client';
 import { getDb } from './db';
 import { publish } from './events';
 import { AuthError } from './auth';
 import { TIME_CONTROLS, type TimeControl } from '@/types';
 
-const RAKE = 0.1; // winner pays 10% of the pot
-const DRAW_RAKE = 0.05; // each side pays 5% of their stake on a draw
+const RAKE = 0.1;
+const DRAW_RAKE = 0.05;
 const ALLOWED_STAKES = [0, 100, 200, 500, 1000];
 const ELO_K = 32;
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export class GameError extends AuthError {}
+
+type Exec = Client | Transaction;
+
+async function one<T>(ex: Exec, sql: string, args: InArgs = []): Promise<T | undefined> {
+  return (await ex.execute({ sql, args })).rows[0] as T | undefined;
+}
+async function all<T>(ex: Exec, sql: string, args: InArgs = []): Promise<T[]> {
+  return (await ex.execute({ sql, args })).rows as unknown as T[];
+}
+async function exec(ex: Exec, sql: string, args: InArgs = []): Promise<void> {
+  await ex.execute({ sql, args });
+}
 
 interface GameRow {
   id: string;
@@ -68,17 +83,18 @@ export interface GameView {
   rematchOfferBy: string | null;
   whiteMs: number;
   blackMs: number;
-  /** Epoch ms when the running clock started counting; null = paused. */
   lastMoveAt: number | null;
   turn: 'w' | 'b';
   serverNow: number;
 }
 
-function userBrief(id: string) {
-  const row = getDb()
-    .prepare('SELECT id, username, rating FROM users WHERE id = ?')
-    .get(id) as { id: string; username: string; rating: number };
-  return row;
+async function userBrief(ex: Exec, id: string) {
+  const row = await one<{ id: string; username: string; rating: number }>(
+    ex,
+    'SELECT id, username, rating FROM users WHERE id = ?',
+    [id]
+  );
+  return { id: row!.id, username: row!.username, rating: Number(row!.rating) };
 }
 
 function replay(moves: string[]): Chess {
@@ -87,14 +103,15 @@ function replay(moves: string[]): Chess {
   return chess;
 }
 
-export function toGameView(row: GameRow): GameView {
+async function toGameView(ex: Exec, row: GameRow): Promise<GameView> {
   const moves = JSON.parse(row.moves) as string[];
+  const [white, black] = await Promise.all([userBrief(ex, row.white_id), userBrief(ex, row.black_id)]);
   return {
     id: row.id,
-    white: userBrief(row.white_id),
-    black: userBrief(row.black_id),
+    white,
+    black,
     timeControl: row.time_control as TimeControl,
-    stake: row.stake,
+    stake: Number(row.stake),
     fen: row.fen,
     moves,
     status: row.status,
@@ -103,40 +120,40 @@ export function toGameView(row: GameRow): GameView {
     drawOffer: row.draw_offer,
     rematchGameId: row.rematch_game_id,
     rematchOfferBy: row.rematch_offer,
-    whiteMs: row.white_ms,
-    blackMs: row.black_ms,
-    lastMoveAt: row.last_move_at,
+    whiteMs: Number(row.white_ms),
+    blackMs: Number(row.black_ms),
+    lastMoveAt: row.last_move_at === null ? null : Number(row.last_move_at),
     turn: moves.length % 2 === 0 ? 'w' : 'b',
     serverNow: Date.now(),
   };
 }
 
-function broadcast(row: GameRow) {
-  publish(row.id, { type: 'state', gameId: row.id, payload: toGameView(row) });
+/** Build a view (on the pooled client) and push to SSE subscribers. */
+async function broadcast(db: Client, row: GameRow) {
+  const view = await toGameView(db, row);
+  publish(row.id, { type: 'state', gameId: row.id, payload: view });
 }
 
 // ── Challenges ───────────────────────────────────────────────────
 
-export function createChallenge(
+export async function createChallenge(
   userId: string,
   timeControl: string,
   stake: number,
   creatorColor: 'w' | 'b' | 'random',
   targetUsername?: string
-): ChallengeRow & { targetUsername?: string } {
+): Promise<ChallengeRow & { targetUsername?: string }> {
   if (!(timeControl in TIME_CONTROLS)) throw new GameError('Unknown time control.');
   if (!ALLOWED_STAKES.includes(stake)) throw new GameError('Invalid stake.');
   if (!['w', 'b', 'random'].includes(creatorColor)) throw new GameError('Invalid color choice.');
 
-  const db = getDb();
-  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId) as { credits: number };
-  if (user.credits < stake) throw new GameError('Not enough club credits for that stake.');
+  const db = await getDb();
+  const user = await one<{ credits: number }>(db, 'SELECT credits FROM users WHERE id = ?', [userId]);
+  if (Number(user!.credits) < stake) throw new GameError('Not enough club credits for that stake.');
 
   let targetId: string | null = null;
   if (targetUsername) {
-    const target = db.prepare('SELECT id FROM users WHERE username = ?').get(targetUsername) as
-      | { id: string }
-      | undefined;
+    const target = await one<{ id: string }>(db, 'SELECT id FROM users WHERE username = ?', [targetUsername]);
     if (!target) throw new GameError('No member by that name.', 404);
     if (target.id === userId) throw new GameError('You cannot challenge yourself.');
     targetId = target.id;
@@ -145,67 +162,72 @@ export function createChallenge(
   let code = '';
   for (let i = 0; i < 6; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
 
-  db.prepare(
+  await exec(
+    db,
     `INSERT INTO challenges (code, creator_id, time_control, stake, creator_color, status, created_at, target_user_id)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`
-  ).run(code, userId, timeControl, stake, creatorColor, Date.now(), targetId);
+     VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
+    [code, userId, timeControl, stake, creatorColor, Date.now(), targetId]
+  );
 
-  const row = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code) as ChallengeRow;
+  const row = (await one<ChallengeRow>(db, 'SELECT * FROM challenges WHERE code = ?', [code]))!;
   return { ...row, targetUsername };
 }
 
-export function getChallenge(code: string): (ChallengeRow & { creatorName: string; creatorRating: number }) | null {
-  const row = getDb()
-    .prepare(
-      `SELECT c.*, u.username AS creatorName, u.rating AS creatorRating
-       FROM challenges c JOIN users u ON u.id = c.creator_id WHERE c.code = ?`
-    )
-    .get(code.toUpperCase()) as (ChallengeRow & { creatorName: string; creatorRating: number }) | undefined;
+export async function getChallenge(
+  code: string
+): Promise<(ChallengeRow & { creatorName: string; creatorRating: number }) | null> {
+  const db = await getDb();
+  const row = await one<ChallengeRow & { creatorName: string; creatorRating: number }>(
+    db,
+    `SELECT c.*, u.username AS creatorName, u.rating AS creatorRating
+     FROM challenges c JOIN users u ON u.id = c.creator_id WHERE c.code = ?`,
+    [code.toUpperCase()]
+  );
   return row ?? null;
 }
 
-export function cancelChallenge(code: string, userId: string) {
-  const db = getDb();
-  const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code.toUpperCase()) as
-    | ChallengeRow
-    | undefined;
-  // The creator may cancel; a targeted recipient may decline (same effect)
+export async function cancelChallenge(code: string, userId: string) {
+  const db = await getDb();
+  const ch = await one<ChallengeRow>(db, 'SELECT * FROM challenges WHERE code = ?', [code.toUpperCase()]);
   if (!ch || (ch.creator_id !== userId && ch.target_user_id !== userId)) {
     throw new GameError('Challenge not found.', 404);
   }
   if (ch.status !== 'open') throw new GameError('Challenge is no longer open.');
-  db.prepare(`UPDATE challenges SET status = 'cancelled' WHERE code = ?`).run(ch.code);
+  await exec(db, `UPDATE challenges SET status = 'cancelled' WHERE code = ?`, [ch.code]);
 }
 
-export function listMyChallenges(userId: string): (ChallengeRow & { targetUsername: string | null })[] {
-  return getDb()
-    .prepare(
-      `SELECT c.*, t.username AS targetUsername
-       FROM challenges c LEFT JOIN users t ON t.id = c.target_user_id
-       WHERE c.creator_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`
-    )
-    .all(userId) as (ChallengeRow & { targetUsername: string | null })[];
-}
-
-/** Open challenges addressed to this user — their invitation inbox. */
-export function listIncomingChallenges(
+export async function listMyChallenges(
   userId: string
-): (ChallengeRow & { creatorName: string; creatorRating: number })[] {
-  return getDb()
-    .prepare(
-      `SELECT c.*, u.username AS creatorName, u.rating AS creatorRating
-       FROM challenges c JOIN users u ON u.id = c.creator_id
-       WHERE c.target_user_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`
-    )
-    .all(userId) as (ChallengeRow & { creatorName: string; creatorRating: number })[];
+): Promise<(ChallengeRow & { targetUsername: string | null })[]> {
+  const db = await getDb();
+  return all<ChallengeRow & { targetUsername: string | null }>(
+    db,
+    `SELECT c.*, t.username AS targetUsername
+     FROM challenges c LEFT JOIN users t ON t.id = c.target_user_id
+     WHERE c.creator_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`,
+    [userId]
+  );
 }
 
-export function acceptChallenge(code: string, userId: string): GameView {
-  const db = getDb();
-  const run = db.transaction(() => {
-    const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code.toUpperCase()) as
-      | ChallengeRow
-      | undefined;
+export async function listIncomingChallenges(
+  userId: string
+): Promise<(ChallengeRow & { creatorName: string; creatorRating: number })[]> {
+  const db = await getDb();
+  return all<ChallengeRow & { creatorName: string; creatorRating: number }>(
+    db,
+    `SELECT c.*, u.username AS creatorName, u.rating AS creatorRating
+     FROM challenges c JOIN users u ON u.id = c.creator_id
+     WHERE c.target_user_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`,
+    [userId]
+  );
+}
+
+export async function acceptChallenge(code: string, userId: string): Promise<GameView> {
+  const db = await getDb();
+  const tx = await db.transaction('write');
+  let gameRow: GameRow;
+  try {
+    const ch = await one<ChallengeRow>(tx, 'SELECT * FROM challenges WHERE code = ?', [code.toUpperCase()]);
     if (!ch) throw new GameError('No such challenge code.', 404);
     if (ch.status !== 'open') throw new GameError('That challenge has already been taken.', 409);
     if (ch.creator_id === userId) throw new GameError('You cannot accept your own challenge.');
@@ -213,10 +235,10 @@ export function acceptChallenge(code: string, userId: string): GameView {
       throw new GameError('That table is reserved for another member.', 403);
     }
 
-    const acceptor = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId) as { credits: number };
-    if (acceptor.credits < ch.stake) throw new GameError('Not enough club credits for that stake.');
-    const creator = db.prepare('SELECT credits FROM users WHERE id = ?').get(ch.creator_id) as { credits: number };
-    if (creator.credits < ch.stake) throw new GameError('The challenger no longer has the stake.');
+    const acceptor = await one<{ credits: number }>(tx, 'SELECT credits FROM users WHERE id = ?', [userId]);
+    if (Number(acceptor!.credits) < ch.stake) throw new GameError('Not enough club credits for that stake.');
+    const creator = await one<{ credits: number }>(tx, 'SELECT credits FROM users WHERE id = ?', [ch.creator_id]);
+    if (Number(creator!.credits) < ch.stake) throw new GameError('The challenger no longer has the stake.');
 
     let creatorIsWhite: boolean;
     if (ch.creator_color === 'w') creatorIsWhite = true;
@@ -225,33 +247,35 @@ export function acceptChallenge(code: string, userId: string): GameView {
 
     const whiteId = creatorIsWhite ? ch.creator_id : userId;
     const blackId = creatorIsWhite ? userId : ch.creator_id;
-
     const tc = TIME_CONTROLS[ch.time_control as TimeControl];
     const baseMs = tc.minutes * 60 * 1000;
     const id = randomUUID();
     const now = Date.now();
-    const startFen = new Chess().fen();
 
-    db.prepare(
+    await exec(
+      tx,
       `INSERT INTO games (id, white_id, black_id, time_control, stake, fen, moves, status,
                           white_ms, black_ms, last_move_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL, ?, ?)`
-    ).run(id, whiteId, blackId, ch.time_control, ch.stake, startFen, baseMs, baseMs, now, now);
+       VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL, ?, ?)`,
+      [id, whiteId, blackId, ch.time_control, ch.stake, new Chess().fen(), baseMs, baseMs, now, now]
+    );
+    await exec(tx, `UPDATE challenges SET status = 'accepted', game_id = ? WHERE code = ?`, [id, ch.code]);
 
-    db.prepare(`UPDATE challenges SET status = 'accepted', game_id = ? WHERE code = ?`).run(id, ch.code);
+    gameRow = (await one<GameRow>(tx, 'SELECT * FROM games WHERE id = ?', [id]))!;
+    await tx.commit();
+  } catch (e) {
+    await tx.rollback();
+    throw e;
+  }
 
-    return db.prepare('SELECT * FROM games WHERE id = ?').get(id) as GameRow;
-  });
-
-  const row = run();
-  broadcast(row);
-  return toGameView(row);
+  await broadcast(db, gameRow);
+  return toGameView(db, gameRow);
 }
 
 // ── Game lifecycle ───────────────────────────────────────────────
 
-function loadGame(gameId: string): GameRow {
-  const row = getDb().prepare('SELECT * FROM games WHERE id = ?').get(gameId) as GameRow | undefined;
+async function loadGame(ex: Exec, gameId: string): Promise<GameRow> {
+  const row = await one<GameRow>(ex, 'SELECT * FROM games WHERE id = ?', [gameId]);
   if (!row) throw new GameError('Game not found.', 404);
   return row;
 }
@@ -262,8 +286,8 @@ function assertPlayer(row: GameRow, userId: string): 'w' | 'b' {
   throw new GameError('You are not seated at this table.', 403);
 }
 
-/** Settle credits + ratings. result: white_wins | black_wins | draw */
-function settle(db: ReturnType<typeof getDb>, row: GameRow, result: string, reason: string) {
+/** Settle credits + ratings on the given executor. Mutates `row`. */
+async function settle(ex: Exec, row: GameRow, result: string, reason: string) {
   const now = Date.now();
   row.status = 'completed';
   row.result = result;
@@ -271,19 +295,18 @@ function settle(db: ReturnType<typeof getDb>, row: GameRow, result: string, reas
   row.draw_offer = null;
   row.updated_at = now;
 
-  const white = db.prepare('SELECT rating FROM users WHERE id = ?').get(row.white_id) as { rating: number };
-  const black = db.prepare('SELECT rating FROM users WHERE id = ?').get(row.black_id) as { rating: number };
+  const white = (await one<{ rating: number }>(ex, 'SELECT rating FROM users WHERE id = ?', [row.white_id]))!;
+  const black = (await one<{ rating: number }>(ex, 'SELECT rating FROM users WHERE id = ?', [row.black_id]))!;
 
   const scoreWhite = result === 'white_wins' ? 1 : result === 'black_wins' ? 0 : 0.5;
-  const expectedWhite = 1 / (1 + 10 ** ((black.rating - white.rating) / 400));
+  const expectedWhite = 1 / (1 + 10 ** ((Number(black.rating) - Number(white.rating)) / 400));
   const deltaWhite = Math.round(ELO_K * (scoreWhite - expectedWhite));
 
-  const stake = row.stake;
+  const stake = Number(row.stake);
   let whiteCredits = 0;
   let blackCredits = 0;
   if (stake > 0) {
     if (result === 'white_wins') {
-      // winner nets 90% of the opponent's stake (10% house rake on the pot)
       whiteCredits = Math.round(stake * 2 * (1 - RAKE)) - stake;
       blackCredits = -stake;
     } else if (result === 'black_wins') {
@@ -295,68 +318,69 @@ function settle(db: ReturnType<typeof getDb>, row: GameRow, result: string, reas
     }
   }
 
-  const updateUser = db.prepare(
-    `UPDATE users SET credits = credits + ?, rating = MAX(100, rating + ?),
+  const updateSql = `UPDATE users SET credits = credits + ?, rating = MAX(100, rating + ?),
        games_played = games_played + 1,
-       wins = wins + ?, losses = losses + ?, draws = draws + ?
-     WHERE id = ?`
-  );
-  updateUser.run(
+       wins = wins + ?, losses = losses + ?, draws = draws + ? WHERE id = ?`;
+  await exec(ex, updateSql, [
     whiteCredits,
     deltaWhite,
     scoreWhite === 1 ? 1 : 0,
     scoreWhite === 0 ? 1 : 0,
     scoreWhite === 0.5 ? 1 : 0,
-    row.white_id
-  );
-  updateUser.run(
+    row.white_id,
+  ]);
+  await exec(ex, updateSql, [
     blackCredits,
     -deltaWhite,
     scoreWhite === 0 ? 1 : 0,
     scoreWhite === 1 ? 1 : 0,
     scoreWhite === 0.5 ? 1 : 0,
-    row.black_id
-  );
+    row.black_id,
+  ]);
 
-  db.prepare(
+  await exec(
+    ex,
     `UPDATE games SET status = ?, result = ?, end_reason = ?, draw_offer = NULL,
-       white_ms = ?, black_ms = ?, updated_at = ? WHERE id = ?`
-  ).run(row.status, row.result, row.end_reason, row.white_ms, row.black_ms, now, row.id);
+       white_ms = ?, black_ms = ?, updated_at = ? WHERE id = ?`,
+    [row.status, row.result, row.end_reason, row.white_ms, row.black_ms, now, row.id]
+  );
 }
 
-/** Lazily flag a game whose running clock has expired. Returns fresh row. */
-function flagIfExpired(row: GameRow): GameRow {
-  if (row.status !== 'active' || row.last_move_at === null) return row;
+/** If the running clock has expired, settle on `ex`. Returns whether it did. */
+async function flagIfExpired(ex: Exec, row: GameRow): Promise<boolean> {
+  if (row.status !== 'active' || row.last_move_at === null) return false;
   const moves = JSON.parse(row.moves) as string[];
   const turn: 'w' | 'b' = moves.length % 2 === 0 ? 'w' : 'b';
-  const elapsed = Date.now() - row.last_move_at;
-  const remaining = (turn === 'w' ? row.white_ms : row.black_ms) - elapsed;
-  if (remaining > 0) return row;
+  const elapsed = Date.now() - Number(row.last_move_at);
+  const remaining = (turn === 'w' ? Number(row.white_ms) : Number(row.black_ms)) - elapsed;
+  if (remaining > 0) return false;
 
-  const db = getDb();
   if (turn === 'w') row.white_ms = 0;
   else row.black_ms = 0;
-  db.transaction(() => {
-    settle(db, row, turn === 'w' ? 'black_wins' : 'white_wins', 'timeout');
-  })();
-  const fresh = loadGame(row.id);
-  broadcast(fresh);
-  return fresh;
+  await settle(ex, row, turn === 'w' ? 'black_wins' : 'white_wins', 'timeout');
+  return true;
 }
 
-export function getGame(gameId: string): GameView {
-  return toGameView(flagIfExpired(loadGame(gameId)));
+export async function getGame(gameId: string): Promise<GameView> {
+  const db = await getDb();
+  const row = await loadGame(db, gameId);
+  if (await flagIfExpired(db, row)) {
+    await broadcast(db, row);
+  }
+  return toGameView(db, row);
 }
 
-export function applyMove(
+export async function applyMove(
   gameId: string,
   userId: string,
   move: { from: string; to: string; promotion?: string }
-): GameView {
-  const db = getDb();
-  const run = db.transaction(() => {
-    let row = loadGame(gameId);
-    row = flagIfExpired(row);
+): Promise<GameView> {
+  const db = await getDb();
+  const tx = await db.transaction('write');
+  let row: GameRow;
+  try {
+    row = await loadGame(tx, gameId);
+    await flagIfExpired(tx, row);
     if (row.status !== 'active') throw new GameError('This game is over.', 409);
 
     const color = assertPlayer(row, userId);
@@ -379,21 +403,21 @@ export function applyMove(
     const now = Date.now();
     const tc = TIME_CONTROLS[row.time_control as TimeControl];
 
-    // Clock: charge the mover for elapsed thinking time (clock starts
-    // running after White's first move), then add their increment.
     if (row.last_move_at !== null) {
-      const elapsed = now - row.last_move_at;
-      if (color === 'w') row.white_ms -= elapsed;
-      else row.black_ms -= elapsed;
+      const elapsed = now - Number(row.last_move_at);
+      if (color === 'w') row.white_ms = Number(row.white_ms) - elapsed;
+      else row.black_ms = Number(row.black_ms) - elapsed;
       const remaining = color === 'w' ? row.white_ms : row.black_ms;
       if (remaining <= 0) {
         if (color === 'w') row.white_ms = 0;
         else row.black_ms = 0;
-        settle(db, row, color === 'w' ? 'black_wins' : 'white_wins', 'timeout');
-        return loadGame(gameId);
+        await settle(tx, row, color === 'w' ? 'black_wins' : 'white_wins', 'timeout');
+        await tx.commit();
+        await broadcast(db, row);
+        return toGameView(db, row);
       }
-      if (color === 'w') row.white_ms += tc.increment * 1000;
-      else row.black_ms += tc.increment * 1000;
+      if (color === 'w') row.white_ms = Number(row.white_ms) + tc.increment * 1000;
+      else row.black_ms = Number(row.black_ms) + tc.increment * 1000;
     }
 
     moves.push(made.san);
@@ -422,27 +446,30 @@ export function applyMove(
         result = 'draw';
         reason = 'fifty_move';
       }
-      db.prepare(`UPDATE games SET fen = ?, moves = ?, last_move_at = ?, updated_at = ? WHERE id = ?`).run(
+      await exec(tx, `UPDATE games SET fen = ?, moves = ?, last_move_at = ?, updated_at = ? WHERE id = ?`, [
         row.fen,
         row.moves,
         row.last_move_at,
         now,
-        row.id
-      );
-      settle(db, row, result, reason);
+        row.id,
+      ]);
+      await settle(tx, row, result, reason);
     } else {
-      db.prepare(
+      await exec(
+        tx,
         `UPDATE games SET fen = ?, moves = ?, white_ms = ?, black_ms = ?, last_move_at = ?,
-           draw_offer = NULL, updated_at = ? WHERE id = ?`
-      ).run(row.fen, row.moves, row.white_ms, row.black_ms, row.last_move_at, now, row.id);
+           draw_offer = NULL, updated_at = ? WHERE id = ?`,
+        [row.fen, row.moves, row.white_ms, row.black_ms, row.last_move_at, now, row.id]
+      );
     }
+    await tx.commit();
+  } catch (e) {
+    await tx.rollback();
+    throw e;
+  }
 
-    return loadGame(gameId);
-  });
-
-  const fresh = run();
-  broadcast(fresh);
-  return toGameView(fresh);
+  await broadcast(db, row);
+  return toGameView(db, row);
 }
 
 export type GameAction =
@@ -454,127 +481,119 @@ export type GameAction =
   | { kind: 'abort' }
   | { kind: 'rematch' };
 
-export function performAction(gameId: string, userId: string, action: GameAction): GameView {
-  const db = getDb();
+export async function performAction(gameId: string, userId: string, action: GameAction): Promise<GameView> {
+  const db = await getDb();
+  const tx = await db.transaction('write');
+  let row: GameRow;
   let rematchTarget: GameRow | null = null;
-
-  const run = db.transaction(() => {
-    let row = loadGame(gameId);
+  try {
+    row = await loadGame(tx, gameId);
     const color = assertPlayer(row, userId);
 
     switch (action.kind) {
       case 'resign': {
-        row = flagIfExpired(row);
+        await flagIfExpired(tx, row);
         if (row.status !== 'active') throw new GameError('This game is over.', 409);
-        settle(db, row, color === 'w' ? 'black_wins' : 'white_wins', 'resignation');
+        await settle(tx, row, color === 'w' ? 'black_wins' : 'white_wins', 'resignation');
         break;
       }
       case 'offer_draw': {
-        row = flagIfExpired(row);
+        await flagIfExpired(tx, row);
         if (row.status !== 'active') throw new GameError('This game is over.', 409);
         if (row.draw_offer && row.draw_offer !== color) {
-          // both sides want it — treat as acceptance
-          settle(db, row, 'draw', 'draw_agreed');
+          await settle(tx, row, 'draw', 'draw_agreed');
         } else {
-          db.prepare('UPDATE games SET draw_offer = ?, updated_at = ? WHERE id = ?').run(
-            color,
-            Date.now(),
-            gameId
-          );
+          row.draw_offer = color;
+          await exec(tx, 'UPDATE games SET draw_offer = ?, updated_at = ? WHERE id = ?', [color, Date.now(), gameId]);
         }
         break;
       }
       case 'accept_draw': {
-        row = flagIfExpired(row);
+        await flagIfExpired(tx, row);
         if (row.status !== 'active') throw new GameError('This game is over.', 409);
         if (!row.draw_offer || row.draw_offer === color) throw new GameError('No draw offer to accept.');
-        settle(db, row, 'draw', 'draw_agreed');
+        await settle(tx, row, 'draw', 'draw_agreed');
         break;
       }
       case 'decline_draw': {
-        db.prepare('UPDATE games SET draw_offer = NULL, updated_at = ? WHERE id = ?').run(Date.now(), gameId);
+        row.draw_offer = null;
+        await exec(tx, 'UPDATE games SET draw_offer = NULL, updated_at = ? WHERE id = ?', [Date.now(), gameId]);
         break;
       }
       case 'claim_timeout': {
-        const fresh = flagIfExpired(row);
-        if (fresh.status === 'active') throw new GameError('The clock has not expired.');
+        await flagIfExpired(tx, row);
+        if (row.status === 'active') throw new GameError('The clock has not expired.');
         break;
       }
       case 'abort': {
-        row = flagIfExpired(row);
+        await flagIfExpired(tx, row);
         if (row.status !== 'active') throw new GameError('This game is over.', 409);
         const moves = JSON.parse(row.moves) as string[];
         if (moves.length >= 2) throw new GameError('Too late to abort — resign instead.');
-        db.prepare(
-          `UPDATE games SET status = 'aborted', end_reason = 'abandoned', updated_at = ? WHERE id = ?`
-        ).run(Date.now(), gameId);
+        row.status = 'aborted';
+        row.end_reason = 'abandoned';
+        await exec(tx, `UPDATE games SET status = 'aborted', end_reason = 'abandoned', updated_at = ? WHERE id = ?`, [
+          Date.now(),
+          gameId,
+        ]);
         break;
       }
       case 'rematch': {
         if (row.status === 'active') throw new GameError('The game is still in progress.');
-        if (row.rematch_game_id) break; // already created
+        if (row.rematch_game_id) break;
         if (!row.rematch_offer) {
-          db.prepare('UPDATE games SET rematch_offer = ?, updated_at = ? WHERE id = ?').run(
-            userId,
-            Date.now(),
-            gameId
-          );
+          row.rematch_offer = userId;
+          await exec(tx, 'UPDATE games SET rematch_offer = ?, updated_at = ? WHERE id = ?', [userId, Date.now(), gameId]);
           break;
         }
-        if (row.rematch_offer === userId) break; // repeat click
-        // Other player already offered — create the rematch with colors swapped
+        if (row.rematch_offer === userId) break;
         const tc = TIME_CONTROLS[row.time_control as TimeControl];
         const baseMs = tc.minutes * 60 * 1000;
         const id = randomUUID();
         const now = Date.now();
-        db.prepare(
+        await exec(
+          tx,
           `INSERT INTO games (id, white_id, black_id, time_control, stake, fen, moves, status,
                               white_ms, black_ms, last_move_at, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL, ?, ?)`
-        ).run(
-          id,
-          row.black_id,
-          row.white_id,
-          row.time_control,
-          row.stake,
-          new Chess().fen(),
-          baseMs,
-          baseMs,
-          now,
-          now
+           VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL, ?, ?)`,
+          [id, row.black_id, row.white_id, row.time_control, row.stake, new Chess().fen(), baseMs, baseMs, now, now]
         );
-        db.prepare('UPDATE games SET rematch_game_id = ?, updated_at = ? WHERE id = ?').run(id, now, gameId);
-        rematchTarget = loadGame(id);
+        row.rematch_game_id = id;
+        await exec(tx, 'UPDATE games SET rematch_game_id = ?, updated_at = ? WHERE id = ?', [id, now, gameId]);
+        rematchTarget = (await one<GameRow>(tx, 'SELECT * FROM games WHERE id = ?', [id]))!;
         break;
       }
     }
+    await tx.commit();
+  } catch (e) {
+    await tx.rollback();
+    throw e;
+  }
 
-    return loadGame(gameId);
-  });
-
-  const fresh = run();
-  broadcast(fresh);
-  if (rematchTarget) broadcast(rematchTarget);
-  return toGameView(fresh);
+  await broadcast(db, row);
+  if (rematchTarget) await broadcast(db, rematchTarget);
+  return toGameView(db, row);
 }
 
 // ── Listings ─────────────────────────────────────────────────────
 
-export function listMyGames(userId: string): { active: GameView[]; recent: GameView[] } {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT * FROM games WHERE white_id = ? OR black_id = ?
-       ORDER BY updated_at DESC LIMIT 30`
-    )
-    .all(userId, userId) as GameRow[];
+export async function listMyGames(userId: string): Promise<{ active: GameView[]; recent: GameView[] }> {
+  const db = await getDb();
+  const rows = await all<GameRow>(
+    db,
+    `SELECT * FROM games WHERE white_id = ? OR black_id = ?
+     ORDER BY updated_at DESC LIMIT 30`,
+    [userId, userId]
+  );
 
   const active: GameView[] = [];
   const recent: GameView[] = [];
   for (const r of rows) {
-    const flagged = flagIfExpired(r);
-    if (flagged.status === 'active') active.push(toGameView(flagged));
-    else if (recent.length < 10) recent.push(toGameView(flagged));
+    if (await flagIfExpired(db, r)) {
+      await broadcast(db, r);
+    }
+    if (r.status === 'active') active.push(await toGameView(db, r));
+    else if (recent.length < 10) recent.push(await toGameView(db, r));
   }
   return { active, recent };
 }

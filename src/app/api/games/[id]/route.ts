@@ -10,6 +10,6 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: Params) {
   return handleApi(async () => {
     const { id } = await params;
-    return { game: getGame(id) };
+    return { game: await getGame(id) };
   });
 }

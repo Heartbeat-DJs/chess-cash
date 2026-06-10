@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const { kind } = await req.json();
     if (!KINDS.includes(kind)) throw new GameError('Unknown action.');
-    const game = performAction(id, user.id, { kind } as GameAction);
+    const game = await performAction(id, user.id, { kind } as GameAction);
     return { game };
   });
 }

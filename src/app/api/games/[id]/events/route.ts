@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   // Validate the game exists before opening the stream
   let initial;
   try {
-    initial = getGame(id);
+    initial = await getGame(id);
   } catch {
     return new Response('not found', { status: 404 });
   }
