@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { getGame } from '@/lib/server/game-service';
+import { getSessionUser } from '@/lib/server/auth';
 import { subscribe } from '@/lib/server/events';
 
 export const runtime = 'nodejs';
@@ -10,6 +11,11 @@ type Params = { params: Promise<{ id: string }> };
 /** Server-Sent Events stream of game state updates. */
 export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
+
+  // Require a session (EventSource sends the cookie same-origin) — the
+  // initial getGame can settle/pay out, so it must not be anonymous.
+  const user = await getSessionUser();
+  if (!user) return new Response('unauthorized', { status: 401 });
 
   // Validate the game exists before opening the stream
   let initial;

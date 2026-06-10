@@ -26,8 +26,7 @@ const STEPS = [
   {
     num: '02',
     title: 'Stake Your Claim',
-    desc: 'Fund your wallet with anything from $5 to $50. Every deposit is held in Stripe escrow until your match settles — the house never touches your stake. All balances are simulated credits for now.',
-    demo: true,
+    desc: 'Fund your wallet with anything from $5 to $50 by card via Stripe. Your balance is real money — held securely until your match settles. Cash play is in beta; play responsibly.',
   },
   {
     num: '03',
@@ -113,7 +112,7 @@ const FAQS = [
   },
   {
     q: 'How quickly can I withdraw my winnings?',
-    a: 'Once cash play launches, withdrawals will settle to your bank or card via Stripe in 1–3 business days, with no withdrawal fee. For now, all balances are simulated credits, so there is nothing to withdraw — and nothing at risk.',
+    a: 'Request a withdrawal from your wallet and the house settles it to your chosen method (PayPal, Venmo, Cash App, or bank). Your balance is real money — wager responsibly.',
   },
   {
     q: 'How does the rating system work?',
@@ -144,7 +143,7 @@ export default function HowItWorksPage() {
           <p className={styles.heroSub}>Skill in. Cash out. No luck involved.</p>
           <div className={styles.notice}>
             <span className={styles.noticeDot} aria-hidden="true" />
-            <span>Cash play coming soon &mdash; all stakes currently simulated</span>
+            <span>Cash play is in beta &mdash; stakes are real, so play responsibly</span>
           </div>
         </section>
 
@@ -161,10 +160,7 @@ export default function HowItWorksPage() {
               <li key={step.num} className={styles.step}>
                 <span className={styles.stepNum} aria-hidden="true">{step.num}</span>
                 <div className={styles.stepBody}>
-                  <h3 className={styles.stepTitle}>
-                    {step.title}
-                    {step.demo && <span className="badge badge-gold">Demo</span>}
-                  </h3>
+                  <h3 className={styles.stepTitle}>{step.title}</h3>
                   <p className={styles.stepDesc}>{step.desc}</p>
                   {step.example && (
                     <p className={styles.stepExample}>
@@ -200,7 +196,7 @@ export default function HowItWorksPage() {
 
           <p className={styles.legalFootnote}>
             ChessCash is a product prototype and nothing on this page is legal advice.
-            Skill-gaming rules vary by jurisdiction, and all stakes remain simulated until cash play launches.
+            Skill-gaming rules vary by jurisdiction; play only where permitted and only with money you can afford to stake.
           </p>
         </section>
 

@@ -160,18 +160,18 @@ export default function HomePage() {
             </div>
             <div className={styles.heroStats}>
               <div className={styles.stat}>
-                <span className={styles.statValue}>10K+</span>
-                <span className={styles.statLabel}>Players</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.stat}>
-                <span className={styles.statValue}>$50K+</span>
-                <span className={styles.statLabel}>Paid Out</span>
-              </div>
-              <div className={styles.statDivider} />
-              <div className={styles.stat}>
                 <span className={styles.statValue}>100%</span>
                 <span className={styles.statLabel}>Skill</span>
+              </div>
+              <div className={styles.statDivider} />
+              <div className={styles.stat}>
+                <span className={styles.statValue}>Real</span>
+                <span className={styles.statLabel}>Stakes</span>
+              </div>
+              <div className={styles.statDivider} />
+              <div className={styles.stat}>
+                <span className={styles.statValue}>Instant</span>
+                <span className={styles.statLabel}>Matchmaking</span>
               </div>
             </div>
             <span className={styles.statsNote}>Skill-based stakes &bull; cash play in beta</span>

@@ -132,7 +132,7 @@ function WalletInner() {
 
   // deposit confirmation banner from Stripe redirect
   const depositParam = searchParams.get('deposit'); // 'success' | 'cancelled'
-  const [banner, setBanner] = useState<{ kind: 'success' | 'cancelled'; text: string } | null>(null);
+  const [banner, setBanner] = useState<{ kind: 'success' | 'cancelled' | 'pending'; text: string } | null>(null);
 
   // ── Auth gate ────────────────────────────────────────────────
   useEffect(() => {
@@ -161,23 +161,34 @@ function WalletInner() {
   useEffect(() => {
     if (!depositParam) return;
     if (depositParam === 'success') {
-      setBanner({ kind: 'success', text: 'Deposit received. Your chips are on the table.' });
-      // Confirm against Stripe from the redirect (credits even if the
-      // webhook isn't configured), then refresh the balance everywhere.
+      // Confirm against Stripe from the redirect (credits even if the webhook
+      // isn't configured). Only declare success once the funds actually land;
+      // otherwise show a pending notice rather than a false "received".
       const confirmAndRefresh = async () => {
+        let credited = false;
         if (sessionId) {
           try {
-            await fetch('/api/wallet/confirm', {
+            const res = await fetch('/api/wallet/confirm', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ sessionId }),
             });
+            const data = await res.json().catch(() => ({}));
+            credited = res.ok && Boolean(data.credited);
           } catch {
-            // webhook will reconcile if this fails
+            // network hiccup — fall through to the pending notice
           }
         }
         await refresh();
         await loadWallet();
+        setBanner(
+          credited
+            ? { kind: 'success', text: 'Deposit received. Your chips are on the table.' }
+            : {
+                kind: 'pending',
+                text: 'Payment is processing — your balance will update in a moment. Refresh if it doesn’t appear shortly.',
+              }
+        );
       };
       void confirmAndRefresh();
     } else if (depositParam === 'cancelled') {

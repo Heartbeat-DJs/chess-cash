@@ -130,16 +130,22 @@ export async function createDepositSession(
  * webhook). Idempotent: safe to call alongside the webhook. Verifies the
  * session is paid and belongs to this user before crediting.
  */
-export async function confirmDeposit(userId: string, sessionId: string): Promise<{ balance: number }> {
+export async function confirmDeposit(
+  userId: string,
+  sessionId: string
+): Promise<{ balance: number; credited: boolean; pending: boolean }> {
   const stripe = getStripe();
   if (!stripe) throw new AuthError('Deposits are not available yet.', 503);
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   const owner = session.metadata?.userId || session.client_reference_id;
   if (owner !== userId) throw new AuthError('That receipt is not yours.', 403);
-  if (session.metadata?.kind === 'wallet_deposit' && session.payment_status === 'paid') {
+  const paid = session.metadata?.kind === 'wallet_deposit' && session.payment_status === 'paid';
+  if (paid) {
     await creditDeposit(session.id, userId, session.amount_total ?? 0);
   }
-  return { balance: await getBalance(userId) };
+  // credited === we acted on a paid session; pending === not yet paid (the
+  // webhook will reconcile once Stripe finalizes the charge)
+  return { balance: await getBalance(userId), credited: paid, pending: !paid };
 }
 
 /** Credit a completed Stripe checkout. Idempotent on the session id. */

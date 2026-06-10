@@ -129,11 +129,13 @@ export default function OnlineGamePage() {
     }
   }, [authLoading, user, router, gameId]);
 
-  // A staked game just settled — refresh the nav balance with winnings/losses
-  const settledStaked = game?.status === 'completed' && (game?.stake ?? 0) > 0;
+  // A staked game just ended (settled or aborted) — refresh the nav balance
+  // with the winnings / losses / refunded escrow.
+  const staffedEnded =
+    (game?.status === 'completed' || game?.status === 'aborted') && (game?.stake ?? 0) > 0;
   useEffect(() => {
-    if (settledStaked) void refresh();
-  }, [settledStaked, refresh]);
+    if (staffedEnded) void refresh();
+  }, [staffedEnded, refresh]);
 
   // When a rematch board is dealt, both players walk over together
   const rematchGameId = game?.rematchGameId ?? null;
@@ -255,7 +257,6 @@ export default function OnlineGamePage() {
                   <span>Entry: ${(game.stake / 100).toFixed(2)}</span>
                   <span>Win: +${((Math.round(game.stake * 2 * 0.9) - game.stake) / 100).toFixed(2)}</span>
                 </div>
-                <span className={styles.demoTag}>demo</span>
               </>
             ) : (
               <>

@@ -312,8 +312,20 @@ function assertPlayer(row: GameRow, userId: string): 'w' | 'b' {
  *   draw → each refunded their stake minus the small draw rake
  * Ratings + win/loss/draw stats are updated separately (no credit math).
  */
-async function settle(ex: Exec, row: GameRow, result: string, reason: string) {
+async function settle(ex: Exec, row: GameRow, result: string, reason: string): Promise<boolean> {
   const now = Date.now();
+
+  // Atomically CLAIM the game (active -> completed). This single statement is
+  // the mutex: only the caller whose UPDATE flips the row gets to pay out, so
+  // concurrent settles (e.g. two clients triggering the same timeout) can
+  // never double-credit the winner. If we don't claim it, bail without paying.
+  const claim = await ex.execute({
+    sql: `UPDATE games SET status = 'completed', result = ?, end_reason = ?, draw_offer = NULL,
+            white_ms = ?, black_ms = ?, updated_at = ? WHERE id = ? AND status = 'active'`,
+    args: [result, reason, row.white_ms, row.black_ms, now, row.id],
+  });
+  if (Number(claim.rowsAffected) === 0) return false;
+
   row.status = 'completed';
   row.result = result;
   row.end_reason = reason;
@@ -358,13 +370,7 @@ async function settle(ex: Exec, row: GameRow, result: string, reason: string) {
     scoreWhite === 0.5 ? 1 : 0,
     row.black_id,
   ]);
-
-  await exec(
-    ex,
-    `UPDATE games SET status = ?, result = ?, end_reason = ?, draw_offer = NULL,
-       white_ms = ?, black_ms = ?, updated_at = ? WHERE id = ?`,
-    [row.status, row.result, row.end_reason, row.white_ms, row.black_ms, now, row.id]
-  );
+  return true;
 }
 
 /** If the running clock has expired, settle on `ex`. Returns whether it did. */
@@ -378,16 +384,26 @@ async function flagIfExpired(ex: Exec, row: GameRow): Promise<boolean> {
 
   if (turn === 'w') row.white_ms = 0;
   else row.black_ms = 0;
-  await settle(ex, row, turn === 'w' ? 'black_wins' : 'white_wins', 'timeout');
-  return true;
+  return settle(ex, row, turn === 'w' ? 'black_wins' : 'white_wins', 'timeout');
 }
 
 export async function getGame(gameId: string): Promise<GameView> {
   const db = await getDb();
-  const row = await loadGame(db, gameId);
-  if (await flagIfExpired(db, row)) {
-    await broadcast(db, row);
+  // Settling-on-read can pay out, so it must run inside a write transaction
+  // (serialized by SQLite) — the conditional claim in settle() then guarantees
+  // exactly-one payout even across concurrent readers.
+  const tx = await db.transaction('write');
+  let row: GameRow;
+  let settled = false;
+  try {
+    row = await loadGame(tx, gameId);
+    settled = await flagIfExpired(tx, row);
+    await tx.commit();
+  } catch (e) {
+    await tx.rollback();
+    throw e;
   }
+  if (settled) await broadcast(db, row);
   return toGameView(db, row);
 }
 
@@ -597,6 +613,20 @@ export async function performAction(gameId: string, userId: string, action: Game
 
 // ── Listings ─────────────────────────────────────────────────────
 
+/** Settle one game transactionally if its clock expired. Returns the fresh row. */
+async function settleExpiredTx(db: Client, gameId: string): Promise<{ row: GameRow; settled: boolean }> {
+  const tx = await db.transaction('write');
+  try {
+    const row = await loadGame(tx, gameId);
+    const settled = await flagIfExpired(tx, row);
+    await tx.commit();
+    return { row, settled };
+  } catch (e) {
+    await tx.rollback();
+    throw e;
+  }
+}
+
 export async function listMyGames(userId: string): Promise<{ active: GameView[]; recent: GameView[] }> {
   const db = await getDb();
   const rows = await all<GameRow>(
@@ -608,9 +638,13 @@ export async function listMyGames(userId: string): Promise<{ active: GameView[];
 
   const active: GameView[] = [];
   const recent: GameView[] = [];
-  for (const r of rows) {
-    if (await flagIfExpired(db, r)) {
-      await broadcast(db, r);
+  for (let r of rows) {
+    // Only an active game with a running clock can need settling — settle
+    // those transactionally so a list read can't double-pay.
+    if (r.status === 'active' && r.last_move_at !== null) {
+      const { row, settled } = await settleExpiredTx(db, r.id);
+      r = row;
+      if (settled) await broadcast(db, r);
     }
     if (r.status === 'active') active.push(await toGameView(db, r));
     else if (recent.length < 10) recent.push(await toGameView(db, r));
@@ -753,6 +787,9 @@ export async function notificationCounts(
   let yourTurn = 0;
   for (const g of games) {
     const moves = JSON.parse(g.moves) as string[];
+    // Skip brand-new games (0 moves): both players are walking to the board,
+    // and the opener doesn't need a "your move" nudge for a game they just started.
+    if (moves.length === 0) continue;
     const turn = moves.length % 2 === 0 ? 'w' : 'b';
     const myColor = g.white_id === userId ? 'w' : 'b';
     if (turn === myColor) yourTurn++;

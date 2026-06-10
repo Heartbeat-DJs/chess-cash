@@ -72,7 +72,7 @@ function LoginInner() {
                     <div className={styles.memberMeta}>
                         <span>♖ {user.rating}</span>
                         <span className={styles.metaDivider} aria-hidden="true">·</span>
-                        <span>${(user.credits / 100).toFixed(2)} credits</span>
+                        <span>${(user.credits / 100).toFixed(2)} balance</span>
                     </div>
 
                     <div className={styles.signedActions}>
@@ -172,9 +172,8 @@ function LoginInner() {
                 <div className={styles.perk}>
                     <span className={styles.perkIcon} aria-hidden="true">✦</span>
                     <span className={styles.perkText}>
-                        New members are staked <strong>$10.00</strong> in club credits.
+                        Membership is free. Fund your wallet when you&rsquo;re ready to play for real stakes.
                     </span>
-                    <span className={styles.demoTag}>demo</span>
                 </div>
 
                 <p className={styles.switchLine}>

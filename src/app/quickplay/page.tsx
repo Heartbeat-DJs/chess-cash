@@ -62,8 +62,14 @@ function errMessage(err: unknown): string {
 }
 
 export default function QuickPlayPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const router = useRouter();
+
+  // Pull a fresh balance on entry (client navigation doesn't remount the
+  // provider) so stake-affordability and the balance pill aren't stale.
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const [phase, setPhase] = useState<Phase>('setup');
   const [selectedTC, setSelectedTC] = useState<TimeControl>('blitz_5');
@@ -126,6 +132,7 @@ export default function QuickPlayPage() {
         if (cancelled) return;
         if (res.status === 'matched' && res.gameId) {
           inQueue.current = false;
+          void refresh(); // stake escrowed — sync the nav balance before leaving
           router.push(`/online/game/${res.gameId}`);
         } else if (res.status === 'idle') {
           // We were dropped from the queue server-side — return to setup.
@@ -143,7 +150,7 @@ export default function QuickPlayPage() {
       window.clearInterval(tick);
       window.clearInterval(poll);
     };
-  }, [phase, router]);
+  }, [phase, router, refresh]);
 
   // ── Find a match ───────────────────────────────────────────────
   async function findMatch() {
@@ -167,6 +174,7 @@ export default function QuickPlayPage() {
       inQueue.current = true;
       if (res.status === 'matched' && res.gameId) {
         inQueue.current = false;
+        void refresh(); // stake escrowed — sync the nav balance before leaving
         router.push(`/online/game/${res.gameId}`);
         return;
       }
