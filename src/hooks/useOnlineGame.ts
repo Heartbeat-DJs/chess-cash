@@ -53,7 +53,10 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   const [legalMoves, setLegalMoves] = useState<Square[]>([]);
   const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
   const [viewPly, setViewPly] = useState<number | null>(null);
-  const [clockTick, setClockTick] = useState(0);
+  const [clockTick, setClockTick] = useState<{ whiteMs: number; blackMs: number }>({
+    whiteMs: 0,
+    blackMs: 0,
+  });
 
   const skewRef = useRef(0); // serverNow - clientNow
   const prevMovesRef = useRef<number>(-1);
@@ -132,10 +135,22 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
     prevStatusRef.current = game.status;
   }, [game, user]);
 
-  // ── Clock interpolation tick ──────────────────────────────────
+  // ── Clock interpolation (computed on a 200ms tick) ────────────
   useEffect(() => {
-    if (!game || game.status !== 'active') return;
-    const t = setInterval(() => setClockTick((n) => n + 1), 200);
+    if (!game) return;
+    const compute = () => {
+      let { whiteMs, blackMs } = game;
+      if (game.status === 'active' && game.lastMoveAt !== null) {
+        const nowServer = Date.now() + skewRef.current;
+        const elapsed = Math.max(0, nowServer - game.lastMoveAt);
+        if (game.turn === 'w') whiteMs = Math.max(0, whiteMs - elapsed);
+        else blackMs = Math.max(0, blackMs - elapsed);
+      }
+      setClockTick({ whiteMs, blackMs });
+    };
+    compute();
+    if (game.status !== 'active') return;
+    const t = setInterval(compute, 200);
     return () => clearInterval(t);
   }, [game]);
 
@@ -152,18 +167,7 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   }, [game]);
 
   // Displayed clock values (interpolated for the running side)
-  const clocks = useMemo(() => {
-    void clockTick;
-    if (!game) return { whiteMs: 0, blackMs: 0 };
-    let { whiteMs, blackMs } = game;
-    if (game.status === 'active' && game.lastMoveAt !== null) {
-      const nowServer = Date.now() + skewRef.current;
-      const elapsed = Math.max(0, nowServer - game.lastMoveAt);
-      if (game.turn === 'w') whiteMs = Math.max(0, whiteMs - elapsed);
-      else blackMs = Math.max(0, blackMs - elapsed);
-    }
-    return { whiteMs, blackMs };
-  }, [game, clockTick]);
+  const clocks = clockTick;
 
   // Auto-claim when the running clock hits zero (either side)
   useEffect(() => {
