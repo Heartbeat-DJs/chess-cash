@@ -63,7 +63,10 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   const prevStatusRef = useRef<string | null>(null);
   const claimSentRef = useRef(false);
   const gameRef = useRef<OnlineGameView | null>(null);
-  gameRef.current = game;
+  // Keep a ref to the latest game for stale-free reads inside callbacks
+  useEffect(() => {
+    gameRef.current = game;
+  });
 
   const applyServerGame = useCallback((g: OnlineGameView) => {
     skewRef.current = g.serverNow - Date.now();
