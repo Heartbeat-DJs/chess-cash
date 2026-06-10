@@ -57,6 +57,36 @@ interface OnlineGame {
   turn: 'w' | 'b';
 }
 
+interface MemberResult {
+  id: string;
+  username: string;
+  rating: number;
+  gamesPlayed: number;
+  friendStatus: 'none' | 'pending_out' | 'pending_in' | 'friends';
+}
+
+interface FriendEntry {
+  id: string;
+  userId: string;
+  username: string;
+  rating: number;
+}
+
+interface SocialData {
+  friends: FriendEntry[];
+  incoming: FriendEntry[];
+  outgoing: FriendEntry[];
+}
+
+interface IncomingChallenge {
+  code: string;
+  timeControl: string;
+  stake: number;
+  creatorColor: string;
+  creatorName: string;
+  creatorRating: number;
+}
+
 type SeatColor = 'w' | 'b' | 'random';
 
 // ── Pickers ─────────────────────────────────────────────────────
@@ -144,6 +174,17 @@ export default function OnlineLobbyPage() {
   const [recentGames, setRecentGames] = useState<OnlineGame[]>([]);
   const [tablesLoaded, setTablesLoaded] = useState(false);
 
+  // Members & friends
+  const [searchQ, setSearchQ] = useState('');
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchResults, setSearchResults] = useState<MemberResult[] | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [social, setSocial] = useState<SocialData>({ friends: [], incoming: [], outgoing: [] });
+  const [inbox, setInbox] = useState<IncomingChallenge[]>([]);
+  const [inboxBusy, setInboxBusy] = useState<string | null>(null);
+  /** When set, "Set Up a Table" sends the invitation straight to this member. */
+  const [challengeTarget, setChallengeTarget] = useState<string | null>(null);
+
   /** Codes of our open challenges as of the last poll — used to detect acceptance. */
   const trackedCodes = useRef<Set<string>>(new Set());
 
@@ -154,10 +195,14 @@ export default function OnlineLobbyPage() {
 
   const refreshTables = useCallback(async () => {
     try {
-      const [chData, gameData] = await Promise.all([
+      const [chData, gameData, socialData, inboxData] = await Promise.all([
         api<{ challenges: OpenChallenge[] }>('/api/challenges'),
         api<{ active: OnlineGame[]; recent: OnlineGame[] }>('/api/games'),
+        api<SocialData>('/api/friends'),
+        api<{ challenges: IncomingChallenge[] }>('/api/challenges/incoming'),
       ]);
+      setSocial(socialData);
+      setInbox(inboxData.challenges);
       const codes = new Set(chData.challenges.map((c) => c.code));
 
       // A challenge that vanished from our open list was either accepted
@@ -192,11 +237,12 @@ export default function OnlineLobbyPage() {
     if (user) void refreshTables();
   }, [user, refreshTables]);
 
-  // Poll every 3s while we have open challenges (so the creator gets seated)
+  // Poll while signed in: faster when waiting on an open table, slower
+  // otherwise (still needed so the invitation inbox stays fresh).
   const hasOpen = openChallenges.length > 0 || created !== null;
   useEffect(() => {
-    if (!user || !hasOpen) return;
-    const id = window.setInterval(() => void refreshTables(), 3000);
+    if (!user) return;
+    const id = window.setInterval(() => void refreshTables(), hasOpen ? 3000 : 6000);
     return () => window.clearInterval(id);
   }, [user, hasOpen, refreshTables]);
 
@@ -209,7 +255,12 @@ export default function OnlineLobbyPage() {
       const data = await api<{ challenge: OpenChallenge }>('/api/challenges', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeControl: selectedTC, stake, color }),
+        body: JSON.stringify({
+          timeControl: selectedTC,
+          stake,
+          color,
+          toUsername: challengeTarget ?? undefined,
+        }),
       });
       setCreated(data.challenge);
       setCopied(false);
@@ -220,6 +271,92 @@ export default function OnlineLobbyPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  // ── Members & friends actions ─────────────────────────────────
+  async function runSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQ.trim();
+    if (q.length < 2) {
+      setSearchError('Type at least two characters.');
+      return;
+    }
+    setSearchBusy(true);
+    setSearchError(null);
+    try {
+      const data = await api<{ users: MemberResult[] }>(`/api/users/search?q=${encodeURIComponent(q)}`);
+      setSearchResults(data.users);
+    } catch (err) {
+      setSearchError(errMessage(err));
+    } finally {
+      setSearchBusy(false);
+    }
+  }
+
+  async function addFriend(username: string) {
+    try {
+      await api<{ status: string }>('/api/friends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      // refresh both the roster and any visible search statuses
+      void refreshTables();
+      setSearchResults((prev) =>
+        prev
+          ? prev.map((m) =>
+              m.username === username
+                ? { ...m, friendStatus: m.friendStatus === 'pending_in' ? 'friends' : 'pending_out' }
+                : m
+            )
+          : prev
+      );
+    } catch (err) {
+      setSearchError(errMessage(err));
+    }
+  }
+
+  async function respondFriend(id: string, action: 'accept' | 'decline' | 'remove') {
+    try {
+      await api<{ ok: boolean }>(`/api/friends/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+    } catch {
+      // roster refresh below reconciles
+    }
+    void refreshTables();
+  }
+
+  function challengeMember(username: string) {
+    setChallengeTarget(username);
+    setCreated(null);
+    setCreateError(null);
+    document.getElementById('setup-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function acceptIncoming(code: string) {
+    setInboxBusy(code);
+    try {
+      const data = await api<{ game: { id: string } }>(`/api/challenges/${code}`, { method: 'POST' });
+      router.push(`/online/game/${data.game.id}`);
+    } catch (err) {
+      setSearchError(errMessage(err));
+      setInboxBusy(null);
+      void refreshTables();
+    }
+  }
+
+  async function declineIncoming(code: string) {
+    setInboxBusy(code);
+    try {
+      await api<{ ok: boolean }>(`/api/challenges/${code}`, { method: 'DELETE' });
+    } catch {
+      // already gone — refresh reconciles
+    }
+    setInboxBusy(null);
+    void refreshTables();
   }
 
   async function copyInvite() {
@@ -237,7 +374,13 @@ export default function OnlineLobbyPage() {
     try {
       await api<{ ok: boolean }>(`/api/challenges/${code}`, { method: 'DELETE' });
       trackedCodes.current.delete(code);
-      setCreated((prev) => (prev?.code === code ? null : prev));
+      setCreated((prev) => {
+        if (prev?.code === code) {
+          setChallengeTarget(null);
+          return null;
+        }
+        return prev;
+      });
     } catch {
       // Likely already accepted or gone — the next refresh reconciles.
     }
@@ -314,14 +457,78 @@ export default function OnlineLobbyPage() {
           </div>
         </header>
 
+        {/* ── Invitation inbox ───────────────────────────────── */}
+        {inbox.length > 0 && (
+          <section className={styles.inboxCard} aria-label="Incoming challenges">
+            <h2 className={styles.inboxTitle}>♦ You&apos;ve Been Challenged</h2>
+            <ul className={styles.list}>
+              {inbox.map((c) => (
+                <li key={c.code} className={styles.row}>
+                  <div className={styles.rowMain}>
+                    <span className={styles.rowName}>
+                      {c.creatorName} <em>({c.creatorRating})</em>
+                    </span>
+                    <span className={styles.rowMeta}>
+                      {tcText(c.timeControl)} · {stakeLabel(c.stake)} · {seatText(c.creatorColor)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-gold btn-sm"
+                    disabled={inboxBusy === c.code || c.stake > user.credits}
+                    title={c.stake > user.credits ? 'Stake is above your balance' : undefined}
+                    onClick={() => void acceptIncoming(c.code)}
+                  >
+                    {inboxBusy === c.code ? 'Seating…' : 'Accept'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={inboxBusy === c.code}
+                    onClick={() => void declineIncoming(c.code)}
+                  >
+                    Decline
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <div className={styles.lobbyGrid}>
           {/* ── Set Up a Table ───────────────────────────────── */}
-          <section className={styles.card}>
+          <section className={styles.card} id="setup-table">
             <h2 className={styles.cardTitle}>Set Up a Table</h2>
+
+            {challengeTarget && !created && (
+              <div className={styles.targetNote}>
+                <span>
+                  Sending this invitation to <strong>{challengeTarget}</strong>
+                </span>
+                <button
+                  type="button"
+                  className={styles.targetClear}
+                  onClick={() => setChallengeTarget(null)}
+                  aria-label="Cancel direct invitation"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             {created ? (
               <div className={styles.createdBox}>
-                <span className={styles.createdLabel}>Your table code</span>
+                {challengeTarget ? (
+                  <>
+                    <span className={styles.createdLabel}>Invitation sent to</span>
+                    <div className={styles.targetName}>{challengeTarget}</div>
+                    <p className={styles.targetHint}>
+                      They&apos;ll find it waiting in their Back Room. The code below works too.
+                    </p>
+                  </>
+                ) : (
+                  <span className={styles.createdLabel}>Your table code</span>
+                )}
                 <div className={styles.codeDisplay}>{created.code}</div>
                 <button type="button" className={`btn btn-gold ${styles.fullBtn}`} onClick={() => void copyInvite()}>
                   {copied ? '✓ Link Copied' : 'Copy Invite Link'}
@@ -499,6 +706,159 @@ export default function OnlineLobbyPage() {
 
             {!preview && !joinError && (
               <p className={styles.joinFlavor}>Six characters, passed between gentlemen.</p>
+            )}
+          </section>
+        </div>
+
+        {/* ── The Members ────────────────────────────────────── */}
+        <div className={styles.lobbyGrid}>
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Find a Member</h2>
+            <p className={styles.cardHint}>Search the club register by name.</p>
+
+            <form className={styles.joinForm} onSubmit={(e) => void runSearch(e)}>
+              <input
+                className={styles.searchInput}
+                value={searchQ}
+                onChange={(e) => {
+                  setSearchQ(e.target.value);
+                  setSearchError(null);
+                }}
+                placeholder="Member name…"
+                maxLength={20}
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="Search members"
+              />
+              <button
+                type="submit"
+                className={`btn btn-outline ${styles.joinBtn}`}
+                disabled={searchBusy || searchQ.trim().length < 2}
+              >
+                {searchBusy ? 'Searching…' : 'Search'}
+              </button>
+            </form>
+
+            {searchError && (
+              <p className={styles.error} role="alert">{searchError}</p>
+            )}
+
+            {searchResults !== null && searchResults.length === 0 && (
+              <p className={styles.empty}>No member by that name on the register.</p>
+            )}
+
+            {searchResults !== null && searchResults.length > 0 && (
+              <ul className={styles.list}>
+                {searchResults.map((m) => (
+                  <li key={m.id} className={styles.row}>
+                    <div className={styles.rowMain}>
+                      <span className={styles.rowName}>
+                        {m.username} <em>({m.rating})</em>
+                      </span>
+                      <span className={styles.rowMeta}>
+                        {m.gamesPlayed} game{m.gamesPlayed === 1 ? '' : 's'} played
+                      </span>
+                    </div>
+                    {m.friendStatus === 'friends' ? (
+                      <span className={styles.statusTag}>✓ Friends</span>
+                    ) : m.friendStatus === 'pending_out' ? (
+                      <span className={styles.statusTag}>Requested</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => void addFriend(m.username)}
+                      >
+                        {m.friendStatus === 'pending_in' ? 'Accept Friend' : '+ Add Friend'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn btn-gold btn-sm"
+                      onClick={() => challengeMember(m.username)}
+                    >
+                      Challenge
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>Your Circle</h2>
+
+            {social.incoming.length > 0 && (
+              <>
+                <h3 className={styles.subTitle}>Requests</h3>
+                <ul className={styles.list}>
+                  {social.incoming.map((f) => (
+                    <li key={f.id} className={styles.row}>
+                      <div className={styles.rowMain}>
+                        <span className={styles.rowName}>
+                          {f.username} <em>({f.rating})</em>
+                        </span>
+                        <span className={styles.rowMeta}>wants to join your circle</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-gold btn-sm"
+                        onClick={() => void respondFriend(f.id, 'accept')}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => void respondFriend(f.id, 'decline')}
+                      >
+                        Decline
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            {social.friends.length === 0 && social.incoming.length === 0 ? (
+              <p className={styles.empty}>
+                Your circle is empty. Find a member and extend a hand.
+              </p>
+            ) : (
+              social.friends.length > 0 && (
+                <ul className={styles.list}>
+                  {social.friends.map((f) => (
+                    <li key={f.id} className={styles.row}>
+                      <div className={styles.rowMain}>
+                        <span className={styles.rowName}>
+                          {f.username} <em>({f.rating})</em>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-gold btn-sm"
+                        onClick={() => challengeMember(f.username)}
+                      >
+                        Challenge
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.quietBtn}
+                        onClick={() => void respondFriend(f.id, 'remove')}
+                        aria-label={`Remove ${f.username} from your circle`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )
+            )}
+
+            {social.outgoing.length > 0 && (
+              <p className={styles.pendingNote}>
+                Awaiting a reply from {social.outgoing.map((f) => f.username).join(', ')}.
+              </p>
             )}
           </section>
         </div>

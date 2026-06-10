@@ -14,10 +14,28 @@ declare global {
   var __chesscashDb: Database.Database | undefined;
 }
 
+/**
+ * Database location, in order of preference:
+ * 1. SQLITE_PATH env var (explicit)
+ * 2. /var/data — Render persistent disk default mount (auto-detected,
+ *    so attaching a disk in the Render dashboard "just works")
+ * 3. ./data — local dev (ephemeral on Render without a disk)
+ */
+function resolveDbFile(): string {
+  if (process.env.SQLITE_PATH) return process.env.SQLITE_PATH;
+  try {
+    if (fs.existsSync('/var/data') && fs.statSync('/var/data').isDirectory()) {
+      fs.accessSync('/var/data', fs.constants.W_OK);
+      return '/var/data/chesscash.db';
+    }
+  } catch {
+    // not writable — fall through to local path
+  }
+  return path.join(process.cwd(), 'data', 'chesscash.db');
+}
+
 function open(): Database.Database {
-  const file =
-    process.env.SQLITE_PATH ||
-    path.join(process.cwd(), 'data', 'chesscash.db');
+  const file = resolveDbFile();
   fs.mkdirSync(path.dirname(file), { recursive: true });
 
   const db = new Database(file);
@@ -80,7 +98,24 @@ function open(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_games_white ON games(white_id);
     CREATE INDEX IF NOT EXISTS idx_games_black ON games(black_id);
+
+    CREATE TABLE IF NOT EXISTS friends (
+      id TEXT PRIMARY KEY,
+      requester_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      addressee_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending',  -- pending | accepted
+      created_at INTEGER NOT NULL,
+      UNIQUE(requester_id, addressee_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_friends_requester ON friends(requester_id);
+    CREATE INDEX IF NOT EXISTS idx_friends_addressee ON friends(addressee_id);
   `);
+
+  // Guarded migrations for columns added after first release
+  const challengeCols = db.prepare(`PRAGMA table_info(challenges)`).all() as { name: string }[];
+  if (!challengeCols.some((c) => c.name === 'target_user_id')) {
+    db.exec(`ALTER TABLE challenges ADD COLUMN target_user_id TEXT`);
+  }
 
   return db;
 }

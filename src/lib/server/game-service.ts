@@ -49,6 +49,7 @@ interface ChallengeRow {
   status: string;
   game_id: string | null;
   created_at: number;
+  target_user_id: string | null;
 }
 
 export interface GameView {
@@ -120,8 +121,9 @@ export function createChallenge(
   userId: string,
   timeControl: string,
   stake: number,
-  creatorColor: 'w' | 'b' | 'random'
-): ChallengeRow {
+  creatorColor: 'w' | 'b' | 'random',
+  targetUsername?: string
+): ChallengeRow & { targetUsername?: string } {
   if (!(timeControl in TIME_CONTROLS)) throw new GameError('Unknown time control.');
   if (!ALLOWED_STAKES.includes(stake)) throw new GameError('Invalid stake.');
   if (!['w', 'b', 'random'].includes(creatorColor)) throw new GameError('Invalid color choice.');
@@ -130,15 +132,26 @@ export function createChallenge(
   const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId) as { credits: number };
   if (user.credits < stake) throw new GameError('Not enough club credits for that stake.');
 
+  let targetId: string | null = null;
+  if (targetUsername) {
+    const target = db.prepare('SELECT id FROM users WHERE username = ?').get(targetUsername) as
+      | { id: string }
+      | undefined;
+    if (!target) throw new GameError('No member by that name.', 404);
+    if (target.id === userId) throw new GameError('You cannot challenge yourself.');
+    targetId = target.id;
+  }
+
   let code = '';
   for (let i = 0; i < 6; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
 
   db.prepare(
-    `INSERT INTO challenges (code, creator_id, time_control, stake, creator_color, status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?)`
-  ).run(code, userId, timeControl, stake, creatorColor, Date.now());
+    `INSERT INTO challenges (code, creator_id, time_control, stake, creator_color, status, created_at, target_user_id)
+     VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`
+  ).run(code, userId, timeControl, stake, creatorColor, Date.now(), targetId);
 
-  return db.prepare('SELECT * FROM challenges WHERE code = ?').get(code) as ChallengeRow;
+  const row = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code) as ChallengeRow;
+  return { ...row, targetUsername };
 }
 
 export function getChallenge(code: string): (ChallengeRow & { creatorName: string; creatorRating: number }) | null {
@@ -153,16 +166,38 @@ export function getChallenge(code: string): (ChallengeRow & { creatorName: strin
 
 export function cancelChallenge(code: string, userId: string) {
   const db = getDb();
-  const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code) as ChallengeRow | undefined;
-  if (!ch || ch.creator_id !== userId) throw new GameError('Challenge not found.', 404);
+  const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code.toUpperCase()) as
+    | ChallengeRow
+    | undefined;
+  // The creator may cancel; a targeted recipient may decline (same effect)
+  if (!ch || (ch.creator_id !== userId && ch.target_user_id !== userId)) {
+    throw new GameError('Challenge not found.', 404);
+  }
   if (ch.status !== 'open') throw new GameError('Challenge is no longer open.');
-  db.prepare(`UPDATE challenges SET status = 'cancelled' WHERE code = ?`).run(code);
+  db.prepare(`UPDATE challenges SET status = 'cancelled' WHERE code = ?`).run(ch.code);
 }
 
-export function listMyChallenges(userId: string): ChallengeRow[] {
+export function listMyChallenges(userId: string): (ChallengeRow & { targetUsername: string | null })[] {
   return getDb()
-    .prepare(`SELECT * FROM challenges WHERE creator_id = ? AND status = 'open' ORDER BY created_at DESC`)
-    .all(userId) as ChallengeRow[];
+    .prepare(
+      `SELECT c.*, t.username AS targetUsername
+       FROM challenges c LEFT JOIN users t ON t.id = c.target_user_id
+       WHERE c.creator_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`
+    )
+    .all(userId) as (ChallengeRow & { targetUsername: string | null })[];
+}
+
+/** Open challenges addressed to this user — their invitation inbox. */
+export function listIncomingChallenges(
+  userId: string
+): (ChallengeRow & { creatorName: string; creatorRating: number })[] {
+  return getDb()
+    .prepare(
+      `SELECT c.*, u.username AS creatorName, u.rating AS creatorRating
+       FROM challenges c JOIN users u ON u.id = c.creator_id
+       WHERE c.target_user_id = ? AND c.status = 'open' ORDER BY c.created_at DESC`
+    )
+    .all(userId) as (ChallengeRow & { creatorName: string; creatorRating: number })[];
 }
 
 export function acceptChallenge(code: string, userId: string): GameView {
@@ -174,6 +209,9 @@ export function acceptChallenge(code: string, userId: string): GameView {
     if (!ch) throw new GameError('No such challenge code.', 404);
     if (ch.status !== 'open') throw new GameError('That challenge has already been taken.', 409);
     if (ch.creator_id === userId) throw new GameError('You cannot accept your own challenge.');
+    if (ch.target_user_id && ch.target_user_id !== userId) {
+      throw new GameError('That table is reserved for another member.', 403);
+    }
 
     const acceptor = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId) as { credits: number };
     if (acceptor.credits < ch.stake) throw new GameError('Not enough club credits for that stake.');

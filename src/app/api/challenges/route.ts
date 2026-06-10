@@ -9,12 +9,13 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   return handleApi(async () => {
     const user = await requireUser();
-    const { timeControl, stake, color } = await req.json();
+    const { timeControl, stake, color, toUsername } = await req.json();
     const challenge = createChallenge(
       user.id,
       String(timeControl ?? ''),
       Number(stake ?? 0),
-      (color ?? 'random') as 'w' | 'b' | 'random'
+      (color ?? 'random') as 'w' | 'b' | 'random',
+      toUsername ? String(toUsername) : undefined
     );
     return { challenge };
   });

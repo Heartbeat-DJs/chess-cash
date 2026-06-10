@@ -1,0 +1,17 @@
+# Render Blueprint for ChessCash
+# If the existing service was created manually, either:
+#   - attach a 1GB disk mounted at /var/data in the dashboard (the app
+#     auto-detects it — no env vars needed), or
+#   - create a new Blueprint instance from this file.
+services:
+  - type: web
+    name: chesscash
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    disk:
+      name: chesscash-data
+      mountPath: /var/data
+      sizeGB: 1
