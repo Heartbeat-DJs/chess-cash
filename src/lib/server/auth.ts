@@ -72,8 +72,9 @@ export async function registerUser(username: string, password: string): Promise<
 
   const id = randomUUID();
   const hash = bcrypt.hashSync(password, 10);
+  // New members start with a real $0.00 balance — they fund their own wallet.
   await run(
-    'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
+    'INSERT INTO users (id, username, password_hash, credits, created_at) VALUES (?, ?, ?, 0, ?)',
     [id, username, hash, Date.now()]
   );
 

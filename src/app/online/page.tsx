@@ -450,11 +450,11 @@ export default function OnlineLobbyPage() {
             <h1 className={styles.title}>The Back Room</h1>
             <p className={styles.tagline}>Private tables. Real opponents. Winner takes the pot.</p>
           </div>
-          <div className={styles.creditsChip}>
+          <Link href="/wallet" className={styles.creditsChip}>
             <span className={styles.creditsLabel}>Your Balance</span>
             <span className={styles.creditsValue}>${(user.credits / 100).toFixed(2)}</span>
-            <span className={styles.demoTag}>demo</span>
-          </div>
+            <span className={styles.creditsManage}>Wallet →</span>
+          </Link>
         </header>
 
         {/* ── Invitation inbox ───────────────────────────────── */}
@@ -476,7 +476,7 @@ export default function OnlineLobbyPage() {
                     type="button"
                     className="btn btn-gold btn-sm"
                     disabled={inboxBusy === c.code || c.stake > user.credits}
-                    title={c.stake > user.credits ? 'Stake is above your balance' : undefined}
+                    title={c.stake > user.credits ? 'Stake is above your balance — top up in your Wallet' : undefined}
                     onClick={() => void acceptIncoming(c.code)}
                   >
                     {inboxBusy === c.code ? 'Seating…' : 'Accept'}
@@ -582,9 +582,12 @@ export default function OnlineLobbyPage() {
                 </div>
 
                 <div className={styles.field}>
-                  <span className={styles.fieldLabel}>
-                    Table Stakes <em>(demo)</em>
-                  </span>
+                  <div className={styles.stakeLabelRow}>
+                    <span className={styles.fieldLabel}>Table Stakes</span>
+                    <span className={styles.stakeBalance}>
+                      Balance ${(user.credits / 100).toFixed(2)}
+                    </span>
+                  </div>
                   <div className={styles.stakeRow}>
                     {STAKE_OPTIONS.map((opt) => {
                       const disabled = opt.amount > user.credits;
@@ -593,7 +596,7 @@ export default function OnlineLobbyPage() {
                           key={opt.amount}
                           type="button"
                           disabled={disabled}
-                          title={disabled ? 'Not enough credits' : undefined}
+                          title={disabled ? 'Above your balance — top up in your Wallet' : undefined}
                           className={`${styles.stakeChip} ${stake === opt.amount ? styles.chipActive : ''}`}
                           onClick={() => setStake(opt.amount)}
                         >
@@ -603,6 +606,11 @@ export default function OnlineLobbyPage() {
                       );
                     })}
                   </div>
+                  {STAKE_OPTIONS.some((opt) => opt.amount > user.credits) && (
+                    <Link href="/wallet" className={styles.topUpHint}>
+                      Some stakes are above your balance — top up in your Wallet →
+                    </Link>
+                  )}
                 </div>
 
                 <div className={styles.field}>
@@ -688,7 +696,12 @@ export default function OnlineLobbyPage() {
                   <span className={styles.metaChip}>{seatText(preview.creatorColor)}</span>
                 </div>
                 {previewStakeTooHigh ? (
-                  <p className={styles.error}>This table&rsquo;s stake is above your balance.</p>
+                  <p className={styles.error}>
+                    This table&rsquo;s stake is above your balance.{' '}
+                    <Link href="/wallet" className={styles.errorLink}>
+                      Top up in your Wallet →
+                    </Link>
+                  </p>
                 ) : (
                   <button
                     type="button"

@@ -40,7 +40,6 @@ export default function ComputerPage() {
     hintMove,
     evalScore,
     drawStatus,
-    lastRecord,
     ratingDelta,
     view,
     handleSquareClick,
@@ -125,7 +124,7 @@ export default function ComputerPage() {
         <main className={styles.selectMain}>
           <div className={styles.selectTitle}>
             <h1>Choose Your Opponent</h1>
-            <p>Select a worthy adversary from The Gentleman&apos;s Club</p>
+            <p>Free practice against the house — sharpen your game, no stakes.</p>
           </div>
 
           <div className={styles.difficultyGrid}>
@@ -310,14 +309,13 @@ export default function ComputerPage() {
                   title={resultText}
                   subtitle={
                     playerOutcome === 'win'
-                      ? `You defeated the ${currentAI.label}!`
+                      ? `Practice game — you defeated the ${currentAI.label}.`
                       : playerOutcome === 'draw'
-                      ? `A draw against the ${currentAI.label}. Respectable.`
-                      : `The ${currentAI.label} was too strong this time.`
+                      ? `Practice game — a draw against the ${currentAI.label}. Respectable.`
+                      : `Practice game — the ${currentAI.label} was too strong this time.`
                   }
                   moveCount={gameState.moveCount}
                   ratingDelta={ratingDelta}
-                  earnings={lastRecord?.earnings ?? null}
                   pgn={gameState.pgn}
                 >
                   <button className="btn btn-gold" onClick={() => newGame(selectedTC)}>Rematch</button>

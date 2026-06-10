@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import NotificationBell from './NotificationBell';
 import styles from './SiteNav.module.css';
 
 const LINKS = [
@@ -73,11 +74,17 @@ export default function SiteNav() {
             </Link>
           ))}
           {user ? (
-            <Link href="/online" className={styles.userChip} title="Your club account">
-              <span className={styles.userIcon}>♔</span>
-              <span className={styles.userName}>{user.username}</span>
-              <span className={styles.userCredits}>${(user.credits / 100).toFixed(2)}</span>
-            </Link>
+            <div className={styles.account}>
+              <NotificationBell />
+              <Link href="/wallet" className={styles.balanceChip} title="Your wallet">
+                <span className={styles.balanceLabel}>Balance</span>
+                <span className={styles.balanceValue}>${(user.credits / 100).toFixed(2)}</span>
+              </Link>
+              <Link href="/profile" className={styles.userChip} title="Your club account">
+                <span className={styles.userIcon}>♔</span>
+                <span className={styles.userName}>{user.username}</span>
+              </Link>
+            </div>
           ) : (
             <Link href="/login" className="btn btn-gold btn-sm">Sign In</Link>
           )}
@@ -109,11 +116,22 @@ export default function SiteNav() {
           ))}
           {user ? (
             <>
-              <div className={styles.mobileAccount}>
+              <Link
+                href="/wallet"
+                className={`${styles.mobileLink} ${pathname === '/wallet' ? styles.linkActive : ''}`}
+                onClick={() => setOpen(false)}
+              >
+                Wallet
+              </Link>
+              <Link
+                href="/wallet"
+                className={styles.mobileAccount}
+                onClick={() => setOpen(false)}
+              >
                 <span className={styles.userIcon}>♔</span>
                 <span className={styles.userName}>{user.username}</span>
                 <span className={styles.userCredits}>${(user.credits / 100).toFixed(2)}</span>
-              </div>
+              </Link>
               <button
                 className={`btn btn-outline ${styles.mobileCta}`}
                 onClick={() => {

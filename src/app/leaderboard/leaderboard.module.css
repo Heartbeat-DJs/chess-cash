@@ -24,7 +24,7 @@
   animation: fadeIn 0.5s ease both;
 }
 
-.demoBadge {
+.betaBadge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
@@ -41,7 +41,7 @@
   margin-bottom: var(--space-md);
 }
 
-.demoDot {
+.betaDot {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-full);
@@ -98,12 +98,77 @@
   box-shadow: var(--shadow-sm), 0 0 16px rgba(197, 151, 59, 0.25);
 }
 
+/* ── State cards (loading / empty / error) ───────────────────── */
+.stateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-md);
+  padding: var(--space-3xl) var(--space-lg);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(197, 151, 59, 0.1), transparent 65%),
+    var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-2xl);
+  animation: fadeIn 0.4s ease both;
+}
+
+.stateIcon {
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--gold-shimmer);
+  text-shadow: 0 0 26px rgba(197, 151, 59, 0.4);
+}
+
+.stateTitle {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin: 0;
+}
+
+.stateText {
+  max-width: 44ch;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--gold);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Signed earnings colours ─────────────────────────────────── */
+.pos {
+  color: var(--emerald-light);
+}
+
+.neg {
+  color: var(--crimson-light);
+}
+
 /* ── Podium ──────────────────────────────────────────────────── */
 .podium {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
+}
+
+/* When fewer than 3 names exist, keep the podium centred and tidy. */
+.podium1,
+.podium2 {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .podiumCard {
@@ -123,6 +188,26 @@
 .podiumCard:nth-child(1) { animation-delay: 0.05s; }
 .podiumCard:nth-child(2) { animation-delay: 0.15s; }
 .podiumCard:nth-child(3) { animation-delay: 0.25s; }
+
+.youCard {
+  border-color: var(--gold) !important;
+  box-shadow: var(--shadow-lg), 0 0 22px rgba(197, 151, 59, 0.3);
+}
+
+.youTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  margin-bottom: var(--space-sm);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+  background: var(--gold);
+  border-radius: var(--radius-full);
+}
 
 .podiumCard:hover {
   transform: translateY(-3px);
@@ -222,6 +307,14 @@
 .placeGold .podiumStat {
   font-size: 2.4rem;
   color: var(--gold-shimmer);
+}
+
+.podiumCard .podiumStat.pos {
+  color: var(--emerald-light);
+}
+
+.podiumCard .podiumStat.neg {
+  color: var(--crimson-light);
 }
 
 .podiumCaption {
@@ -350,6 +443,27 @@
   background: var(--bg-surface-hover);
 }
 
+.youRow,
+.youRow:nth-child(odd),
+.youRow:hover {
+  background: linear-gradient(90deg, rgba(197, 151, 59, 0.16), rgba(197, 151, 59, 0.04));
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.memberTag {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+  background: var(--gold);
+  border-radius: var(--radius-full);
+}
+
 .colRank {
   color: var(--text-tertiary);
 }
@@ -411,6 +525,14 @@
   font-weight: 600;
   text-align: right;
   color: var(--gold-light);
+}
+
+.cellMoney.pos {
+  color: var(--emerald-light);
+}
+
+.cellMoney.neg {
+  color: var(--crimson-light);
 }
 
 .disclaimer {
@@ -476,6 +598,9 @@
     margin-bottom: var(--space-2xl);
     padding-top: var(--space-lg); /* room for the crown */
   }
+
+  .podium1 { grid-template-columns: minmax(0, 340px); justify-content: center; }
+  .podium2 { grid-template-columns: 1fr 1fr; }
 
   .placeSilver { order: 1; }
   .placeGold { order: 2; }

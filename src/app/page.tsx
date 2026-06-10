@@ -2,27 +2,35 @@
    ChessCash — Home / Landing Page
    =================================================================== */
 
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import SiteNav from '@/components/layout/SiteNav';
 import SiteFooter from '@/components/layout/SiteFooter';
 import HeroBoard from '@/components/home/HeroBoard';
 import styles from './page.module.css';
 
+interface TopPlayer {
+  rank: number;
+  username: string;
+  rating: number;
+}
+
 const GAME_MODES = [
   {
     href: '/computer',
     icon: '♚',
     title: 'Face the House',
-    copy: 'Five house opponents, from the bumbling Patzer to the merciless Grandmaster. Pick your poison and take their rating points.',
+    copy: 'Five house opponents, from the bumbling Patzer to the merciless Grandmaster. Free practice — pick your poison and take their rating points.',
     cta: 'Choose an opponent',
   },
   {
-    href: '/game',
+    href: '/quickplay',
     icon: '♟',
-    title: 'Pass & Play',
-    copy: 'Two players, one device. Settle it over the board the old-fashioned way — a clock, a handshake, and bragging rights.',
-    cta: 'Set up the board',
+    title: 'Quick Play',
+    copy: 'Get matched with a live opponent in seconds. Pick a time control, name your stake, and play for the pot.',
+    cta: 'Find a match',
   },
   {
     href: '/puzzles',
@@ -43,14 +51,14 @@ const STEPS = [
   {
     icon: '♛',
     title: 'Fund Your Wallet',
-    badge: 'coming soon',
-    desc: 'Deposit via card or Apple Pay when cash play arrives. Until then, the house stakes every member in demo credits.',
+    badge: null,
+    desc: 'Deposit securely by card to top up your balance, and withdraw your winnings whenever you like. New accounts start at $0.00.',
   },
   {
     icon: '♟',
     title: 'Play & Win',
-    badge: 'demo stakes',
-    desc: 'Match an opponent at your level. Win the game, take the pot. Winnings are simulated today — the real thing is on its way.',
+    badge: 'cash play in beta',
+    desc: 'Match an opponent at your level and name your stake. Win the game, take the pot — the house takes only a small table fee.',
   },
 ];
 
@@ -77,16 +85,10 @@ const FEATURES = [
   },
 ];
 
-const TOP_EARNERS = [
-  { rank: '01', name: 'E. Blackwood', record: '12 wins this week', amount: '+$1,240' },
-  { rank: '02', name: 'Miss Scarlett V.', record: '10 wins this week', amount: '+$985' },
-  { rank: '03', name: 'Col. Whitmore', record: '9 wins this week', amount: '+$870' },
-];
-
 const FAQS = [
   {
     q: 'Is it legal?',
-    a: 'Chess is a game of pure skill — no dice, no cards, no random chance — which places it outside gambling statutes in most jurisdictions. ChessCash is currently a demo platform: no real money changes hands while we finalize compliance, state by state.',
+    a: 'Chess is a game of pure skill — no dice, no cards, no random chance — which places it outside gambling statutes in most jurisdictions. Cash play is currently in beta as we finalize compliance, state by state.',
   },
   {
     q: 'Is it luck?',
@@ -94,11 +96,11 @@ const FAQS = [
   },
   {
     q: 'How do payouts work?',
-    a: 'In the full release, both players stake an entry, and the winner takes the pot minus a small table fee, withdrawable at any time. For now, wallets and payouts are simulated in demo credits so you can learn the ropes risk-free.',
+    a: 'Both players stake an entry, and the winner takes the pot minus a small table fee — ninety percent of the pot to the victor. A draw refunds your stake less a small fee. Winnings are real and withdrawable from your wallet.',
   },
   {
     q: 'Can I play free?',
-    a: 'Always. Games against the house, pass-and-play with a friend, and the daily puzzle are free forever. Staked matches are simply an option for those who like a little something riding on the result.',
+    a: 'Always. Practice against the house and the daily puzzle are free forever, and every match can be played Friendly for no stake. Staked matches are simply an option for those who like a little something riding on the result.',
   },
   {
     q: 'What devices?',
@@ -107,6 +109,28 @@ const FAQS = [
 ];
 
 export default function HomePage() {
+  const [topPlayers, setTopPlayers] = useState<TopPlayer[]>([]);
+  const [boardLoaded, setBoardLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/leaderboard?sort=rating', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        const players: TopPlayer[] = Array.isArray(data.players) ? data.players.slice(0, 3) : [];
+        setTopPlayers(players);
+        setBoardLoaded(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setBoardLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className={styles.page}>
       <SiteNav />
@@ -117,7 +141,7 @@ export default function HomePage() {
           <div className={styles.heroContent}>
             <div className={styles.heroBadge}>
               <span className={styles.heroBadgeDot} />
-              Skill-Based &bull; Members Only &bull; Demo Stakes
+              Skill-Based &bull; Members Only &bull; Cash Play in Beta
             </div>
             <h1 className={styles.heroTitle}>
               Your Mind.<br />
@@ -150,7 +174,7 @@ export default function HomePage() {
                 <span className={styles.statLabel}>Skill</span>
               </div>
             </div>
-            <span className={styles.statsNote}>Figures simulated for demo</span>
+            <span className={styles.statsNote}>Skill-based stakes &bull; cash play in beta</span>
           </div>
 
           <div className={styles.heroBoardCol}>
@@ -227,23 +251,30 @@ export default function HomePage() {
           <div className={styles.leaderCard}>
             <div className={styles.leaderHead}>
               <div className={styles.leaderHeading}>
-                <span className={styles.sectionEyebrow}>This Week at the Club</span>
-                <h2 className={styles.leaderTitle}>Top Earners</h2>
+                <span className={styles.sectionEyebrow}>The Club Ledger</span>
+                <h2 className={styles.leaderTitle}>Top Rated</h2>
               </div>
-              <span className="badge badge-gold">demo data</span>
             </div>
-            <div className={styles.leaderRows}>
-              {TOP_EARNERS.map((p) => (
-                <div key={p.rank} className={styles.leaderRow}>
-                  <span className={styles.leaderRank}>{p.rank}</span>
-                  <span className={styles.leaderName}>
-                    {p.name}
-                    <span className={styles.leaderRecord}>{p.record}</span>
-                  </span>
-                  <span className={styles.leaderAmount}>{p.amount}</span>
-                </div>
-              ))}
-            </div>
+            {topPlayers.length > 0 ? (
+              <div className={styles.leaderRows}>
+                {topPlayers.map((p, i) => (
+                  <div key={p.username} className={styles.leaderRow}>
+                    <span className={styles.leaderRank}>{String(i + 1).padStart(2, '0')}</span>
+                    <span className={styles.leaderName}>
+                      {p.username}
+                      <span className={styles.leaderRecord}>Club rating</span>
+                    </span>
+                    <span className={styles.leaderAmount}>{p.rating}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.leaderEmpty}>
+                {boardLoaded
+                  ? 'The ledger is open — be the first name on the board.'
+                  : 'Reading the ledger…'}
+              </p>
+            )}
             <div className={styles.leaderFoot}>
               <Link href="/leaderboard" className="btn btn-outline">View Leaderboard</Link>
             </div>

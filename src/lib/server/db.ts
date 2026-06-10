@@ -11,9 +11,7 @@ import path from 'path';
 import fs from 'fs';
 
 declare global {
-  // eslint-disable-next-line no-var
   var __chesscashDb: Client | undefined;
-  // eslint-disable-next-line no-var
   var __chesscashDbReady: Promise<Client> | undefined;
 }
 
@@ -105,6 +103,38 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_friends_requester ON friends(requester_id);
   CREATE INDEX IF NOT EXISTS idx_friends_addressee ON friends(addressee_id);
+  CREATE TABLE IF NOT EXISTS transactions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    kind TEXT NOT NULL,            -- deposit | withdrawal | stake | winnings | refund
+    amount INTEGER NOT NULL,       -- cents, signed (+ credit, - debit)
+    balance_after INTEGER NOT NULL,
+    ref TEXT,                      -- game id or stripe id
+    status TEXT NOT NULL DEFAULT 'completed',
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_tx_user ON transactions(user_id, created_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_ref ON transactions(ref) WHERE ref IS NOT NULL AND kind = 'deposit';
+  CREATE TABLE IF NOT EXISTS withdrawals (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    amount INTEGER NOT NULL,       -- cents
+    method TEXT NOT NULL,          -- e.g. 'paypal', 'venmo', 'bank'
+    destination TEXT NOT NULL,     -- handle / email entered by user
+    status TEXT NOT NULL DEFAULT 'requested',  -- requested | paid | rejected
+    created_at INTEGER NOT NULL,
+    resolved_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(user_id, created_at);
+  CREATE TABLE IF NOT EXISTS matchmaking (
+    user_id TEXT PRIMARY KEY,
+    time_control TEXT NOT NULL,
+    stake INTEGER NOT NULL,
+    rating INTEGER NOT NULL,
+    joined_at INTEGER NOT NULL,
+    game_id TEXT                   -- set when a match is found
+  );
+  CREATE INDEX IF NOT EXISTS idx_mm_bracket ON matchmaking(time_control, stake, game_id);
 `;
 
 async function init(client: Client): Promise<Client> {

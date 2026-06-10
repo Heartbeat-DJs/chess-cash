@@ -141,6 +141,105 @@
     color: var(--text-primary);
 }
 
+.recordValue {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 7vw, 2.4rem);
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+}
+
+/* ── Wallet card (real money) ──────────────────────────────────── */
+.walletCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(145deg, rgba(197, 151, 59, 0.1), var(--bg-surface) 70%);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-gold);
+    text-decoration: none;
+    transition: border-color var(--transition-base), transform var(--transition-base),
+        box-shadow var(--transition-base);
+}
+
+.walletCard:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-gold);
+}
+
+.walletInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.walletLabel {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+}
+
+.walletBalance {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    line-height: 1.05;
+    color: var(--gold-light);
+    text-shadow: 0 0 22px rgba(197, 151, 59, 0.3);
+}
+
+.walletSub {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+}
+
+.walletAction {
+    flex-shrink: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--gold-light);
+    white-space: nowrap;
+}
+
+/* ── Practice section heading ──────────────────────────────────── */
+.practiceHead {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding-top: 6px;
+    margin-bottom: -8px;
+    border-top: 1px solid var(--border-subtle);
+    padding-block-start: 24px;
+}
+
+.practiceTitle {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.practiceBadge {
+    font-size: 0.62rem;
+    color: var(--text-secondary);
+    background: rgba(245, 230, 211, 0.05);
+    border: 1px solid var(--border-subtle);
+}
+
 .numberLabel {
     font-family: var(--font-mono);
     font-size: 0.68rem;

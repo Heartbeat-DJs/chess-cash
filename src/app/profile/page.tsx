@@ -1,6 +1,8 @@
 /* ===================================================================
-   ChessCash — Player Profile & Stats
-   Local record of the member's games, rating ascent, and style.
+   ChessCash — Player Profile
+   Real club account (server-side) up top: identity, rating, online
+   record, and the Wallet. A clearly-separated "Practice (vs Computer)"
+   section below holds the local-only practice record — no money.
    =================================================================== */
 
 'use client';
@@ -12,7 +14,8 @@ import SiteFooter from '@/components/layout/SiteFooter';
 import ChessPiece from '@/components/chess/Piece';
 import SettingsPanel from '@/components/settings/SettingsPanel';
 import { useSettings } from '@/context/SettingsContext';
-import { computeStats, getHistory, formatCredits } from '@/lib/stats';
+import { useAuth } from '@/context/AuthContext';
+import { computeStats, getHistory } from '@/lib/stats';
 import { getPieceSet } from '@/lib/piece-sets';
 import {
   BOARD_THEMES,
@@ -112,6 +115,7 @@ function RatingChart({ records }: { records: GameRecord[] }) {
 
 export default function ProfilePage() {
   const { settings } = useSettings();
+  const { user } = useAuth();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [history, setHistory] = useState<GameRecord[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -231,58 +235,68 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* ── Profile header ────────────────────────────────── */}
+            {/* ── Profile header (real account) ─────────────────── */}
             <section className={styles.headerCard}>
               <div className={styles.headerIdentity}>
                 <div className={styles.avatar} aria-hidden>
                   ♔
                 </div>
                 <div className={styles.identityText}>
-                  <h1 className={styles.memberName}>Club Member</h1>
+                  <h1 className={styles.memberName}>{user?.username ?? 'Club Member'}</h1>
                   <span className={styles.memberSince}>Member since {memberSince}</span>
                 </div>
               </div>
 
               <div className={styles.headerNumbers}>
                 <div className={styles.numberBlock}>
-                  <span className={styles.ratingValue}>{stats.rating}</span>
+                  <span className={styles.ratingValue}>{user?.rating ?? stats.rating}</span>
                   <span className={styles.numberLabel}>Club Rating</span>
-                  {stats.gamesPlayed < 10 && (
+                  {(user?.gamesPlayed ?? 0) < 10 && (
                     <span className={`badge badge-gold ${styles.provisional}`}>Provisional</span>
                   )}
                 </div>
                 <div className={styles.numberBlock}>
-                  <span
-                    className={`${styles.creditsValue} ${
-                      stats.totalEarnings > 0
-                        ? styles.earnPos
-                        : stats.totalEarnings < 0
-                        ? styles.earnNeg
-                        : ''
-                    }`}
-                  >
-                    {formatCredits(stats.totalEarnings)}
+                  <span className={styles.recordValue}>
+                    {user ? `${user.wins}–${user.losses}–${user.draws}` : '0–0–0'}
                   </span>
-                  <span className={styles.numberLabel}>
-                    Club Credits <span className={styles.demoTag}>demo</span>
-                  </span>
+                  <span className={styles.numberLabel}>Online W–L–D</span>
                 </div>
               </div>
             </section>
 
+            {/* ── Wallet (real money) ───────────────────────────── */}
+            <Link href="/wallet" className={styles.walletCard}>
+              <div className={styles.walletInfo}>
+                <span className={styles.walletLabel}>Wallet</span>
+                <span className={styles.walletBalance}>
+                  ${((user?.credits ?? 0) / 100).toFixed(2)}
+                </span>
+                <span className={styles.walletSub}>
+                  Your real balance · cash play in beta
+                </span>
+              </div>
+              <span className={styles.walletAction}>Manage →</span>
+            </Link>
+
+            {/* ── Practice (vs Computer) — local-only, no money ── */}
+            <div className={styles.practiceHead}>
+              <h2 className={styles.practiceTitle}>Practice (vs Computer)</h2>
+              <span className={`badge ${styles.practiceBadge}`}>Local · No stakes</span>
+            </div>
+
             {stats.gamesPlayed === 0 ? (
               <>
-                {/* ── Empty state ───────────────────────────────── */}
+                {/* ── Practice empty state ──────────────────────── */}
                 <section className={styles.emptyState}>
                   <span className={styles.emptyPiece} aria-hidden>
                     ♟
                   </span>
                   <h2 className={styles.emptyTitle}>Your story begins with a single move.</h2>
                   <p className={styles.emptyText}>
-                    No games on record yet. Take a seat at the table, and let the ledger remember
-                    your first victory.
+                    No practice games on record yet. Take a seat at the table, and let the
+                    board remember your first victory.
                   </p>
-                  <Link href="/play" className="btn btn-gold btn-lg">
+                  <Link href="/quickplay" className="btn btn-gold btn-lg">
                     Play Your First Game
                   </Link>
                 </section>
@@ -291,10 +305,10 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                {/* ── Stat tiles ────────────────────────────────── */}
+                {/* ── Practice stat tiles ───────────────────────── */}
                 <section>
                   <div className={styles.sectionHead}>
-                    <h2 className={styles.sectionTitle}>The Record</h2>
+                    <h2 className={styles.sectionTitle}>The Practice Record</h2>
                     <span className={styles.sectionSub}>Kept locally, on your honor</span>
                   </div>
                   <div className={styles.tilesGrid}>
@@ -321,7 +335,7 @@ export default function ProfilePage() {
                 {/* ── Rating history ────────────────────────────── */}
                 <section className={styles.chartCard}>
                   <div className={styles.sectionHead}>
-                    <h2 className={styles.sectionTitle}>Rating Ascent</h2>
+                    <h2 className={styles.sectionTitle}>Practice Rating Ascent</h2>
                     <span className={styles.sectionSub}>
                       Last {Math.min(history.length, 30)} games
                     </span>
@@ -330,15 +344,15 @@ export default function ProfilePage() {
                     <RatingChart records={chartRecords} />
                   ) : (
                     <div className={styles.chartPlaceholder}>
-                      Play more games to chart your ascent.
+                      Play more practice games to chart your ascent.
                     </div>
                   )}
                 </section>
 
-                {/* ── Recent games ──────────────────────────────── */}
+                {/* ── Recent practice games ─────────────────────── */}
                 <section>
                   <div className={styles.sectionHead}>
-                    <h2 className={styles.sectionTitle}>Recent Games</h2>
+                    <h2 className={styles.sectionTitle}>Recent Practice Games</h2>
                     <span className={styles.sectionSub}>Last {recentGames.length} on record</span>
                   </div>
                   <div className={styles.tableCard}>
@@ -349,8 +363,7 @@ export default function ProfilePage() {
                           <th className={styles.thCenter}>As</th>
                           <th>Result</th>
                           <th className={`${styles.hideMobile} ${styles.thCenter}`}>Moves</th>
-                          <th className={`${styles.hideMobile} ${styles.thCenter}`}>Time</th>
-                          <th className={styles.thRight}>Credits</th>
+                          <th className={styles.thRight}>Time</th>
                           <th className={styles.thRight}>When</th>
                         </tr>
                       </thead>
@@ -384,19 +397,8 @@ export default function ProfilePage() {
                             <td className={`${styles.hideMobile} ${styles.tdCenter} ${styles.monoCell}`}>
                               {g.moveCount}
                             </td>
-                            <td className={`${styles.hideMobile} ${styles.tdCenter} ${styles.monoCell}`}>
+                            <td className={`${styles.tdRight} ${styles.monoCell}`}>
                               {formatTimeControl(g.timeControl)}
-                            </td>
-                            <td
-                              className={`${styles.tdRight} ${styles.monoCell} ${
-                                g.earnings > 0
-                                  ? styles.earnPos
-                                  : g.earnings < 0
-                                  ? styles.earnNeg
-                                  : ''
-                              }`}
-                            >
-                              {formatCredits(g.earnings)}
                             </td>
                             <td className={`${styles.tdRight} ${styles.dateCell}`}>
                               {timeAgo(g.date)}
@@ -419,8 +421,8 @@ export default function ProfilePage() {
                     onClick={handleReset}
                   >
                     {confirmingReset
-                      ? 'Click again to erase your record — there is no undo'
-                      : 'Reset local stats'}
+                      ? 'Click again to erase your practice record — there is no undo'
+                      : 'Reset practice stats'}
                   </button>
                 </div>
               </>

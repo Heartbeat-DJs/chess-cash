@@ -26,6 +26,8 @@ interface AuthContextValue {
   register: (username: string, password: string) => Promise<ClubUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Alias for {@link refresh} — re-fetches the signed-in user (and balance). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -39,6 +41,7 @@ const AuthContext = createContext<AuthContextValue>({
   },
   logout: async () => {},
   refresh: async () => {},
+  refreshUser: async () => {},
 });
 
 async function postJson(url: string, body: unknown) {
@@ -90,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, refreshUser: refresh }}>
       {children}
     </AuthContext.Provider>
   );

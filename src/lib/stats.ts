@@ -1,7 +1,9 @@
 /* ===================================================================
-   ChessCash — Player Stats & Game History
-   localStorage-backed. Ratings use a simple Elo update against the
-   AI persona's rating. Earnings are simulated "club credits" (demo).
+   ChessCash — Practice Record & Game History (vs Computer)
+   localStorage-backed local record of the member's PRACTICE games
+   against the house AI: rating, wins/losses/draws, streaks, puzzles.
+   No money lives here — real balances are server-side (the Wallet).
+   Ratings use a simple Elo update against the AI persona's rating.
    =================================================================== */
 
 'use client';
@@ -30,7 +32,7 @@ function safeWrite(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // storage full / blocked — stats are best-effort
+    // storage full / blocked — practice stats are best-effort
   }
 }
 
@@ -60,13 +62,6 @@ export function eloDelta(playerRating: number, opponentRating: number, outcome: 
   return Math.round(K_FACTOR * (score - expected));
 }
 
-/** Simulated wager economics: $1 entry, winner takes $1.80 (10% rake). */
-export function simulatedEarnings(outcome: GameOutcome): number {
-  if (outcome === 'win') return 80; // net +$0.80
-  if (outcome === 'loss') return -100; // lost the $1 entry
-  return -10; // draw: split pot minus rake
-}
-
 export function recordGame(
   record: Omit<GameRecord, 'id' | 'date' | 'ratingAfter' | 'earnings'> & { earnings?: number }
 ): GameRecord {
@@ -80,7 +75,9 @@ export function recordGame(
     ...record,
     id: crypto.randomUUID(),
     date: new Date().toISOString(),
-    earnings: record.earnings ?? simulatedEarnings(record.outcome),
+    // Practice games carry no money. The field is retained for type
+    // compatibility but is always zero — real money lives in the Wallet.
+    earnings: record.earnings ?? 0,
     ratingAfter,
   };
 
@@ -131,11 +128,16 @@ export function computeStats(): PlayerStats {
     winRate: gamesPlayed > 0 ? wins / gamesPlayed : 0,
     currentStreak,
     bestStreak,
-    totalEarnings: history.reduce((sum, g) => sum + g.earnings, 0),
+    // No simulated economy — practice carries no earnings.
+    totalEarnings: 0,
     puzzlesSolved: getPuzzlesSolved().length,
   };
 }
 
+/**
+ * Format a cents amount as a dollar string. Used by the real Wallet /
+ * leaderboard surfaces (server-side money), NOT by the practice record.
+ */
 export function formatCredits(cents: number): string {
   const sign = cents < 0 ? '-' : cents > 0 ? '+' : '';
   return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`;

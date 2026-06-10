@@ -438,10 +438,19 @@
 
 .leaderAmount {
   font-family: var(--font-mono);
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--emerald-light);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold-light);
   flex-shrink: 0;
+}
+
+.leaderEmpty {
+  padding: var(--space-lg) var(--space-md);
+  text-align: center;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
 }
 
 .leaderFoot {

@@ -85,7 +85,7 @@ export default function OnlineGamePage() {
   const params = useParams<{ id: string }>();
   const gameId = params?.id ?? '';
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const { settings } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmingResign, setConfirmingResign] = useState(false);
@@ -128,6 +128,12 @@ export default function OnlineGamePage() {
       router.replace(`/login?next=${encodeURIComponent(`/online/game/${gameId}`)}`);
     }
   }, [authLoading, user, router, gameId]);
+
+  // A staked game just settled — refresh the nav balance with winnings/losses
+  const settledStaked = game?.status === 'completed' && (game?.stake ?? 0) > 0;
+  useEffect(() => {
+    if (settledStaked) void refresh();
+  }, [settledStaked, refresh]);
 
   // When a rematch board is dealt, both players walk over together
   const rematchGameId = game?.rematchGameId ?? null;

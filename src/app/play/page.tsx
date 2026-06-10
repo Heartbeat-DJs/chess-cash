@@ -7,7 +7,7 @@ import SiteFooter from '@/components/layout/SiteFooter';
 import ChessBoard from '@/components/chess/Board';
 import { useSettings } from '@/context/SettingsContext';
 import { getDailyPuzzle, type Puzzle } from '@/lib/puzzles';
-import { computeStats, formatCredits } from '@/lib/stats';
+import { computeStats } from '@/lib/stats';
 import type { PlayerStats } from '@/types';
 import styles from './play.module.css';
 
@@ -66,18 +66,19 @@ export default function PlayPage() {
             </span>
           </Link>
 
-          {/* Pass & Play */}
-          <Link href="/game" className={styles.modeCard}>
+          {/* Quick Play — online matchmaking */}
+          <Link href="/quickplay" className={styles.modeCard}>
             <div className={styles.modeIcon}>
               <span>♔</span>
               <span className={styles.modeIconDark}>♚</span>
             </div>
-            <h2 className={styles.modeTitle}>Pass &amp; Play</h2>
+            <h2 className={styles.modeTitle}>Quick Play</h2>
             <p className={styles.modeCopy}>
-              Two players. One board. Winner takes the pot.
+              Pick a time control and stake — we&apos;ll seat you with the
+              best available challenger.
             </p>
             <span className={styles.modeCta}>
-              Set the Board <span className={styles.ctaArrow}>→</span>
+              Find a Match <span className={styles.ctaArrow}>→</span>
             </span>
           </Link>
 
@@ -158,16 +159,8 @@ export default function PlayPage() {
                 <span className={styles.statLabel}>Win Rate</span>
               </div>
               <div className={styles.stat}>
-                <span
-                  className={`${styles.statValue} ${
-                    stats.totalEarnings >= 0 ? styles.statUp : styles.statDown
-                  }`}
-                >
-                  {formatCredits(stats.totalEarnings)}
-                </span>
-                <span className={styles.statLabel}>
-                  Credits <em className={styles.demoTag}>demo</em>
-                </span>
+                <span className={styles.statValue}>{stats.bestStreak}</span>
+                <span className={styles.statLabel}>Best Streak</span>
               </div>
             </div>
           ) : (

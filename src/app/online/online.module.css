@@ -51,11 +51,26 @@
     align-items: baseline;
     gap: 10px;
     align-self: flex-start;
-    padding: 10px 38px 10px 16px;
+    padding: 10px 16px;
     background: var(--bg-surface);
     border: 1px solid var(--border-medium);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-gold);
+    text-decoration: none;
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.creditsChip:hover {
+    border-color: var(--gold);
+    transform: translateY(-1px);
+}
+
+.creditsManage {
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    white-space: nowrap;
 }
 
 .creditsLabel {
@@ -75,18 +90,44 @@
     text-shadow: 0 0 18px rgba(197, 151, 59, 0.3);
 }
 
-.demoTag {
-    position: absolute;
-    top: 6px;
-    right: 8px;
+/* ── Stake picker label + balance + top-up hint ────────────────── */
+.stakeLabelRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stakeBalance {
     font-family: var(--font-mono);
-    font-size: 0.52rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--text-tertiary);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-full);
-    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.topUpHint {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.86rem;
+    color: var(--gold-light);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.topUpHint:hover {
+    color: var(--gold-shimmer);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.errorLink {
+    color: var(--gold-light);
+    font-style: normal;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
 }
 
 /* ── Lobby cards ───────────────────────────────────────────────── */

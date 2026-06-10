@@ -1,0 +1,176 @@
+/* ===================================================================
+   ChessCash — Notification Bell
+   =================================================================== */
+
+.root {
+    position: relative;
+    display: inline-flex;
+}
+
+.bell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--text-secondary);
+    background: rgba(197, 151, 59, 0.06);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.bell:hover {
+    color: var(--gold-light);
+    border-color: var(--border-medium);
+    background: rgba(197, 151, 59, 0.12);
+}
+
+.bell:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+.bellIcon {
+    display: inline-flex;
+}
+
+.badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--bg-primary);
+    background: linear-gradient(135deg, var(--gold-light), var(--gold-shimmer));
+    border: 1.5px solid var(--bg-primary);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 10px rgba(197, 151, 59, 0.55);
+}
+
+/* Scrim sits behind the panel so taps elsewhere close it on mobile. */
+.scrim {
+    display: none;
+}
+
+.panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 200;
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    animation: panelIn 160ms ease;
+}
+
+@keyframes panelIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.panelHead {
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background var(--transition-fast);
+}
+
+.item:hover {
+    background: rgba(197, 151, 59, 0.1);
+}
+
+.itemLabel {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    color: var(--text-primary);
+}
+
+.itemArrow {
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--gold-light);
+}
+
+.empty {
+    padding: 22px 18px;
+    text-align: center;
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.98rem;
+    color: var(--text-secondary);
+}
+
+/* ── Mobile: full-width sheet ──────────────────────────────────── */
+@media (max-width: 560px) {
+    .scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 190;
+        background: rgba(0, 0, 0, 0.55);
+        animation: scrimIn 160ms ease;
+    }
+
+    @keyframes scrimIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .panel {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        animation: sheetIn 220ms ease;
+    }
+
+    @keyframes sheetIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+}

@@ -1,56 +1,30 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import SiteNav from '@/components/layout/SiteNav';
 import SiteFooter from '@/components/layout/SiteFooter';
-import {
-  byWeeklyEarnings,
-  byRating,
-  byBiggestPot,
-  formatMoney,
-  type LeaderboardMember,
-} from '@/lib/leaderboard-data';
-import { computeStats } from '@/lib/stats';
+import { useAuth } from '@/context/AuthContext';
 import styles from './leaderboard.module.css';
 
-type TabId = 'weekly' | 'rating' | 'pots';
+type SortKey = 'rating' | 'earnings';
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'weekly', label: 'Weekly Earnings' },
+interface LeaderPlayer {
+  rank: number;
+  username: string;
+  rating: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number;
+  netEarnings: number;
+}
+
+const TABS: { id: SortKey; label: string }[] = [
   { id: 'rating', label: 'Rating' },
-  { id: 'pots', label: 'Biggest Pots' },
+  { id: 'earnings', label: 'Earnings' },
 ];
-
-const TAB_DATA: Record<TabId, LeaderboardMember[]> = {
-  weekly: byWeeklyEarnings,
-  rating: byRating,
-  pots: byBiggestPot,
-};
-
-const STAT_CAPTION: Record<TabId, string> = {
-  weekly: 'won this week',
-  rating: 'club rating',
-  pots: 'biggest pot',
-};
-
-const MONEY_COL_LABEL: Record<TabId, string> = {
-  weekly: 'This Week',
-  rating: 'Total Won',
-  pots: 'Best Pot',
-};
-
-function headlineStat(member: LeaderboardMember, tab: TabId): string {
-  if (tab === 'weekly') return formatMoney(member.weeklyEarnings);
-  if (tab === 'pots') return formatMoney(member.biggestPot);
-  return String(member.rating);
-}
-
-function moneyStat(member: LeaderboardMember, tab: TabId): string {
-  if (tab === 'weekly') return formatMoney(member.weeklyEarnings);
-  if (tab === 'pots') return formatMoney(member.biggestPot);
-  return formatMoney(member.totalEarnings);
-}
 
 const PLACE_CLASS: Record<number, string> = {
   1: 'placeGold',
@@ -58,20 +32,48 @@ const PLACE_CLASS: Record<number, string> = {
   3: 'placeBronze',
 };
 
-export default function LeaderboardPage() {
-  const [tab, setTab] = useState<TabId>('weekly');
-  const [personalRating, setPersonalRating] = useState<number | null>(null);
+/** Signed dollars, e.g. +$42.50 / -$7.00. */
+function formatEarnings(cents: number): string {
+  const sign = cents < 0 ? '-' : '+';
+  return `${sign}$${(Math.abs(cents) / 100).toFixed(2)}`;
+}
 
-  useEffect(() => {
-    const stats = computeStats();
-    if (stats.gamesPlayed > 0) {
-      setPersonalRating(stats.rating);
+function winRatePct(rate: number): string {
+  return `${Math.round(rate * 100)}%`;
+}
+
+export default function LeaderboardPage() {
+  const { user } = useAuth();
+  const [sort, setSort] = useState<SortKey>('rating');
+  const [players, setPlayers] = useState<LeaderPlayer[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  const load = useCallback(async (key: SortKey) => {
+    setStatus('loading');
+    try {
+      const res = await fetch(`/api/leaderboard?sort=${key}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Request failed.');
+      setPlayers(Array.isArray(data.players) ? data.players : []);
+      setStatus('ready');
+    } catch {
+      setPlayers([]);
+      setStatus('error');
     }
   }, []);
 
-  const entries = TAB_DATA[tab];
-  const podium = entries.slice(0, 3);
-  const ranked = entries.slice(3);
+  useEffect(() => {
+    void load(sort);
+  }, [sort, load]);
+
+  const podium = players.slice(0, 3);
+  const ranked = players.slice(3);
+  const youRanked = user ? players.some((p) => p.username === user.username) : false;
+  const isEmpty = status === 'ready' && players.length === 0;
+
+  const headline = (p: LeaderPlayer) =>
+    sort === 'earnings' ? formatEarnings(p.netEarnings) : String(p.rating);
+  const headlineCaption = sort === 'earnings' ? 'net earnings' : 'club rating';
 
   return (
     <div className={styles.page}>
@@ -80,9 +82,9 @@ export default function LeaderboardPage() {
       <main className={styles.main}>
         {/* ── Header ─────────────────────────────────────────── */}
         <header className={styles.header}>
-          <span className={styles.demoBadge}>
-            <span className={styles.demoDot} aria-hidden="true" />
-            Demo Data — Simulated Stakes
+          <span className={styles.betaBadge}>
+            <span className={styles.betaDot} aria-hidden="true" />
+            Cash Play in Beta
           </span>
           <h1 className={styles.title}>
             The Club <span className="text-shimmer">Ledger</span>
@@ -96,114 +98,159 @@ export default function LeaderboardPage() {
             <button
               key={t.id}
               role="tab"
-              aria-selected={tab === t.id}
-              className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
-              onClick={() => setTab(t.id)}
+              aria-selected={sort === t.id}
+              className={`${styles.tab} ${sort === t.id ? styles.tabActive : ''}`}
+              onClick={() => setSort(t.id)}
             >
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* ── Podium ─────────────────────────────────────────── */}
-        <section className={styles.podium} aria-label="Top three members">
-          {podium.map((m) => (
-            <article
-              key={m.name}
-              className={`${styles.podiumCard} ${styles[PLACE_CLASS[m.rank]]}`}
-            >
-              {m.rank === 1 && (
-                <span className={styles.crown} aria-label="Champion">
-                  ♛
-                </span>
-              )}
-              <span className={styles.medal}>{m.rank}</span>
-              <h3 className={styles.podiumName}>{m.name}</h3>
-              <span className={styles.podiumTitle}>{m.title}</span>
-              <span className={`mono ${styles.podiumStat}`}>{headlineStat(m, tab)}</span>
-              <span className={styles.podiumCaption}>{STAT_CAPTION[tab]}</span>
-              <div className={styles.podiumMeta}>
-                <span className={styles.podiumMetaItem}>
-                  <span className={styles.podiumMetaLabel}>Rating</span>
-                  <span className="mono">{m.rating}</span>
-                </span>
-                <span className={styles.podiumMetaItem}>
-                  <span className={styles.podiumMetaLabel}>Win Rate</span>
-                  <span className="mono">{Math.round(m.winRate * 100)}%</span>
-                </span>
-                <span className={styles.podiumMetaItem}>
-                  <span className={styles.podiumMetaLabel}>Streak</span>
-                  <span className="mono">
-                    {m.streak >= 3 ? '🔥 ' : ''}
-                    {m.streak}
-                  </span>
-                </span>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        {/* ── Personal standing ──────────────────────────────── */}
-        {personalRating !== null && (
-          <div className={styles.personalCard}>
-            <span className={styles.personalIcon} aria-hidden="true">
-              ♟
-            </span>
-            <div className={styles.personalBody}>
-              <span className={styles.personalLabel}>Your standing</span>
-              <p className={styles.personalText}>
-                Rating <span className={`mono ${styles.personalRating}`}>{personalRating}</span>{' '}
-                — unranked until online play opens
-              </p>
-            </div>
-            <span className="badge badge-gold">Local</span>
+        {/* ── Loading ────────────────────────────────────────── */}
+        {status === 'loading' && (
+          <div className={styles.stateCard} role="status">
+            <span className={styles.spinner} aria-hidden="true" />
+            <p className={styles.stateText}>Reading the ledger…</p>
           </div>
         )}
 
-        {/* ── Ranked table (4th–15th) ────────────────────────── */}
-        <section className={styles.tableCard} aria-label="Ranked members">
-          <div className={styles.tableHead}>
-            <span className={styles.colRank}>#</span>
-            <span>Member</span>
-            <span className={styles.colNum}>Rating</span>
-            <span className={`${styles.colNum} ${styles.colWinRate}`}>Win %</span>
-            <span className={styles.colNum}>Streak</span>
-            <span className={styles.colMoney}>{MONEY_COL_LABEL[tab]}</span>
+        {/* ── Error ──────────────────────────────────────────── */}
+        {status === 'error' && (
+          <div className={styles.stateCard}>
+            <span className={styles.stateIcon} aria-hidden="true">♟</span>
+            <h2 className={styles.stateTitle}>The ledger is closed for now.</h2>
+            <p className={styles.stateText}>We couldn&apos;t reach the club records. Please try again.</p>
+            <button className="btn btn-outline" onClick={() => void load(sort)}>
+              Retry
+            </button>
           </div>
-          {ranked.map((m) => (
-            <div key={m.name} className={styles.row}>
-              <span className={`mono ${styles.rank}`}>{m.rank}</span>
-              <span className={styles.member}>
-                <span className={styles.memberName}>{m.name}</span>
-                <span className={styles.memberTitle}>{m.title}</span>
-              </span>
-              <span className={`mono ${styles.cellNum}`}>{m.rating}</span>
-              <span className={`mono ${styles.cellNum} ${styles.cellWinRate}`}>
-                {Math.round(m.winRate * 100)}%
-              </span>
-              <span className={`mono ${styles.cellNum}`}>
-                {m.streak >= 3 ? '🔥' : ''}
-                {m.streak}
-              </span>
-              <span className={`mono ${styles.cellMoney}`}>{moneyStat(m, tab)}</span>
-            </div>
-          ))}
-        </section>
+        )}
 
-        <p className={styles.disclaimer}>
-          All figures are simulated club credits for demonstration. No real money changes hands.
-        </p>
+        {/* ── Empty ──────────────────────────────────────────── */}
+        {isEmpty && (
+          <div className={styles.stateCard}>
+            <span className={styles.stateIcon} aria-hidden="true">♛</span>
+            <h2 className={styles.stateTitle}>The ledger is open.</h2>
+            <p className={styles.stateText}>
+              No games have been settled yet — be the first name on the board.
+            </p>
+            <Link href="/quickplay" className="btn btn-gold btn-lg">
+              Play Now
+            </Link>
+          </div>
+        )}
 
-        {/* ── CTA strip ──────────────────────────────────────── */}
-        <section className={styles.cta}>
-          <h2 className={styles.ctaTitle}>Think you belong on this list?</h2>
-          <p className={styles.ctaText}>
-            Every name in the ledger started with a single game. The board is waiting.
-          </p>
-          <Link href="/play" className="btn btn-gold btn-lg">
-            Take a Seat
-          </Link>
-        </section>
+        {/* ── Board ──────────────────────────────────────────── */}
+        {status === 'ready' && players.length > 0 && (
+          <>
+            {/* Podium (top 3, adapts to fewer) */}
+            <section
+              className={`${styles.podium} ${styles[`podium${podium.length}` as keyof typeof styles] ?? ''}`}
+              aria-label="Top members"
+            >
+              {podium.map((m) => {
+                const isYou = !!user && m.username === user.username;
+                return (
+                  <article
+                    key={m.username}
+                    className={`${styles.podiumCard} ${styles[PLACE_CLASS[m.rank]]} ${isYou ? styles.youCard : ''}`}
+                  >
+                    {m.rank === 1 && (
+                      <span className={styles.crown} aria-label="Champion">♛</span>
+                    )}
+                    <span className={styles.medal}>{m.rank}</span>
+                    <h3 className={styles.podiumName}>{m.username}</h3>
+                    {isYou && <span className={styles.youTag}>You</span>}
+                    <span className={`mono ${styles.podiumStat} ${sort === 'earnings' ? (m.netEarnings < 0 ? styles.neg : styles.pos) : ''}`}>
+                      {headline(m)}
+                    </span>
+                    <span className={styles.podiumCaption}>{headlineCaption}</span>
+                    <div className={styles.podiumMeta}>
+                      <span className={styles.podiumMetaItem}>
+                        <span className={styles.podiumMetaLabel}>Rating</span>
+                        <span className="mono">{m.rating}</span>
+                      </span>
+                      <span className={styles.podiumMetaItem}>
+                        <span className={styles.podiumMetaLabel}>Win Rate</span>
+                        <span className="mono">{winRatePct(m.winRate)}</span>
+                      </span>
+                      <span className={styles.podiumMetaItem}>
+                        <span className={styles.podiumMetaLabel}>Games</span>
+                        <span className="mono">{m.gamesPlayed}</span>
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+
+            {/* Personal standing */}
+            {user && !youRanked && (
+              <div className={styles.personalCard}>
+                <span className={styles.personalIcon} aria-hidden="true">♟</span>
+                <div className={styles.personalBody}>
+                  <span className={styles.personalLabel}>Your standing</span>
+                  <p className={styles.personalText}>
+                    You&apos;re unranked — play a rated game to appear here.
+                  </p>
+                </div>
+                <Link href="/quickplay" className="btn btn-outline btn-sm">
+                  Play
+                </Link>
+              </div>
+            )}
+
+            {/* Ranked table (4th+) */}
+            {ranked.length > 0 && (
+              <section className={styles.tableCard} aria-label="Ranked members">
+                <div className={styles.tableHead}>
+                  <span className={styles.colRank}>#</span>
+                  <span>Member</span>
+                  <span className={styles.colNum}>Rating</span>
+                  <span className={`${styles.colNum} ${styles.colWinRate}`}>Win %</span>
+                  <span className={styles.colNum}>Games</span>
+                  <span className={styles.colMoney}>Earnings</span>
+                </div>
+                {ranked.map((m) => {
+                  const isYou = !!user && m.username === user.username;
+                  return (
+                    <div key={m.username} className={`${styles.row} ${isYou ? styles.youRow : ''}`}>
+                      <span className={`mono ${styles.rank}`}>{m.rank}</span>
+                      <span className={styles.member}>
+                        <span className={styles.memberName}>{m.username}</span>
+                        {isYou && <span className={styles.memberTag}>You</span>}
+                      </span>
+                      <span className={`mono ${styles.cellNum}`}>{m.rating}</span>
+                      <span className={`mono ${styles.cellNum} ${styles.cellWinRate}`}>
+                        {winRatePct(m.winRate)}
+                      </span>
+                      <span className={`mono ${styles.cellNum}`}>{m.gamesPlayed}</span>
+                      <span className={`mono ${styles.cellMoney} ${m.netEarnings < 0 ? styles.neg : styles.pos}`}>
+                        {formatEarnings(m.netEarnings)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </section>
+            )}
+
+            <p className={styles.disclaimer}>
+              Earnings reflect real staked play. Cash play is currently in beta.
+            </p>
+
+            {/* CTA strip */}
+            <section className={styles.cta}>
+              <h2 className={styles.ctaTitle}>Think you belong on this list?</h2>
+              <p className={styles.ctaText}>
+                Every name in the ledger started with a single game. The board is waiting.
+              </p>
+              <Link href="/quickplay" className="btn btn-gold btn-lg">
+                Play Now
+              </Link>
+            </section>
+          </>
+        )}
       </main>
 
       <SiteFooter />

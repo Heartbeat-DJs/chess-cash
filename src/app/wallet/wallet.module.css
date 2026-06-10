@@ -1,0 +1,538 @@
+/* ===================================================================
+   ChessCash — The Wallet — mobile-first
+   =================================================================== */
+
+.page {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main {
+    flex: 1;
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 18px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.header {
+    min-width: 0;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.tagline {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+}
+
+/* ── Confirmation banner ────────────────────────────────────────── */
+.banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    animation: bannerIn 220ms ease;
+}
+
+@keyframes bannerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bannerOk {
+    color: var(--emerald-light);
+    background: rgba(45, 106, 79, 0.14);
+    border: 1px solid rgba(64, 145, 108, 0.45);
+}
+
+.bannerWarn {
+    color: var(--text-secondary);
+    background: rgba(197, 151, 59, 0.08);
+    border: 1px solid var(--border-medium);
+}
+
+.bannerClose {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    font-size: 1.3rem;
+    line-height: 1;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.bannerClose:hover {
+    opacity: 1;
+}
+
+/* ── Balance ────────────────────────────────────────────────────── */
+.balanceCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 32px 20px;
+    text-align: center;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(197, 151, 59, 0.1), transparent 70%),
+        var(--bg-surface);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-gold);
+}
+
+.balanceLabel {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-tertiary);
+}
+
+.balanceValue {
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 12vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--gold-light);
+    text-shadow: 0 0 30px rgba(197, 151, 59, 0.3);
+}
+
+.balanceNote {
+    margin-top: 4px;
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.88rem;
+    color: var(--text-tertiary);
+    max-width: 36ch;
+}
+
+/* ── Two-column deposit / withdraw ──────────────────────────────── */
+.columns {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 22px 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.cardHead {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cardTitle {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.cardSub {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.92rem;
+    color: var(--text-tertiary);
+}
+
+/* ── Amount chips ───────────────────────────────────────────────── */
+.chipRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.amountChip {
+    padding: 13px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--bg-surface-raised);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.amountChip:hover {
+    border-color: var(--border-medium);
+}
+
+.amountChipActive {
+    border-color: var(--gold) !important;
+    background: rgba(197, 151, 59, 0.12);
+    color: var(--gold-light);
+    box-shadow: var(--shadow-gold);
+}
+
+/* ── Fields ─────────────────────────────────────────────────────── */
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+}
+
+.inputWrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-surface-raised);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast);
+}
+
+.inputWrap:focus-within {
+    border-color: var(--border-strong);
+}
+
+.inputPrefix {
+    padding-left: 14px;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--text-tertiary);
+}
+
+.input {
+    flex: 1;
+    width: 100%;
+    padding: 13px 14px;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+.input::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* ── Method chips ───────────────────────────────────────────────── */
+.methodRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.methodChip {
+    padding: 10px 16px;
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-surface-raised);
+    border: 1.5px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.methodChip:hover {
+    border-color: var(--border-medium);
+}
+
+.methodChipActive {
+    border-color: var(--gold) !important;
+    background: rgba(197, 151, 59, 0.12);
+    color: var(--gold-light);
+}
+
+.submitBtn {
+    width: 100%;
+    margin-top: 2px;
+}
+
+.fineprint {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+/* ── Cashier closed / empty states ──────────────────────────────── */
+.cashierClosed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 16px;
+    text-align: center;
+    background: rgba(197, 151, 59, 0.04);
+    border: 1px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+}
+
+.cashierClosed p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 30ch;
+}
+
+.cashierIcon {
+    font-size: 1.8rem;
+    color: var(--gold-light);
+    opacity: 0.85;
+}
+
+/* ── Inline feedback ────────────────────────────────────────────── */
+.inlineError {
+    padding: 10px 14px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--crimson-light);
+    background: rgba(139, 26, 26, 0.12);
+    border: 1px solid rgba(178, 34, 34, 0.4);
+    border-radius: var(--radius-md);
+}
+
+.inlineSuccess {
+    padding: 10px 14px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--emerald-light);
+    background: rgba(45, 106, 79, 0.14);
+    border: 1px solid rgba(64, 145, 108, 0.4);
+    border-radius: var(--radius-md);
+}
+
+/* ── Pending withdrawals ────────────────────────────────────────── */
+.pendingList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pendingRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.pendingMain {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pendingAmount {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pendingMeta {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--text-tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.statusPill {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold-light);
+    background: rgba(197, 151, 59, 0.12);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-full);
+}
+
+/* ── Ledger ─────────────────────────────────────────────────────── */
+.ledger {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ledgerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ledgerRow:last-child {
+    border-bottom: none;
+}
+
+.ledgerIcon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-subtle);
+}
+
+.ledgerMain {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ledgerLabel {
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ledgerDate {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+}
+
+.ledgerNums {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.ledgerAmount {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.ledgerBalance {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+}
+
+/* tones */
+.toneGreen {
+    color: var(--emerald-light);
+}
+
+.toneGold {
+    color: var(--gold-light);
+}
+
+.toneMuted {
+    color: var(--text-secondary);
+}
+
+.ledgerIcon.toneGreen {
+    border-color: rgba(64, 145, 108, 0.4);
+    background: rgba(45, 106, 79, 0.1);
+}
+
+.ledgerIcon.toneGold {
+    border-color: var(--border-medium);
+    background: rgba(197, 151, 59, 0.1);
+}
+
+/* ── Empty ledger ───────────────────────────────────────────────── */
+.emptyLedger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.emptyIcon {
+    font-size: 2.4rem;
+    color: var(--gold-light);
+    opacity: 0.7;
+}
+
+.emptyLedger p {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.02rem;
+    color: var(--text-secondary);
+    max-width: 34ch;
+}
+
+.loadingText {
+    color: var(--text-tertiary);
+}
+
+/* ── Desktop ────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+    .columns {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .columns > .card {
+        flex: 1;
+        min-width: 0;
+    }
+}

@@ -15,7 +15,6 @@ export interface GameEvent {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __chesscashEvents: Map<string, Set<Listener>> | undefined;
 }
 
