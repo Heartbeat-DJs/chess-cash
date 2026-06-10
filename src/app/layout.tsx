@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { AuthProvider } from "@/context/AuthContext";
+import NotificationBar from "@/components/layout/NotificationBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,7 +33,10 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          <SettingsProvider>{children}</SettingsProvider>
+          <SettingsProvider>
+            {children}
+            <NotificationBar />
+          </SettingsProvider>
         </AuthProvider>
       </body>
     </html>

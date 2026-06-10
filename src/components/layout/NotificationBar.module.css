@@ -1,0 +1,121 @@
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  pointer-events: none; /* let clicks pass except on cards */
+  animation: rise 0.25s ease-out;
+}
+
+@keyframes rise {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.inner {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(18, 18, 22, 0.96);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.eventCard {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.icon {
+  font-size: 1.5rem;
+  color: var(--gold, #d4af37);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f3ead6;
+}
+
+.rating {
+  color: #b7a98a;
+  font-weight: 400;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #9c9484;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.declineBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #c9c2b4;
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.declineBtn:hover:not(:disabled) {
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff9b9b;
+}
+
+.declineBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dismissBtn {
+  background: transparent;
+  border: none;
+  color: #8a847a;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.dismissBtn:hover {
+  color: #f3ead6;
+}
+
+@media (max-width: 520px) {
+  .bar { padding: 8px; }
+  .card { padding: 10px 12px; gap: 10px; }
+  .title { font-size: 0.88rem; }
+  .icon { font-size: 1.25rem; }
+}

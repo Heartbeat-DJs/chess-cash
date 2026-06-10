@@ -58,7 +58,11 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
     blackMs: 0,
   });
 
-  const skewRef = useRef(0); // serverNow - clientNow
+  // Local wall-clock time when the current frame was received. Interpolation
+  // anchors to this instead of a per-frame server-clock skew estimate, so the
+  // running clock can't drift or jump differently on each device. This is the
+  // fix for "the two phones show different times for each other."
+  const recvAtRef = useRef(0);
   const prevMovesRef = useRef<number>(-1);
   const prevStatusRef = useRef<string | null>(null);
   const claimSentRef = useRef(false);
@@ -69,7 +73,7 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   });
 
   const applyServerGame = useCallback((g: OnlineGameView) => {
-    skewRef.current = g.serverNow - Date.now();
+    recvAtRef.current = Date.now();
     setGame(g);
   }, []);
 
@@ -144,8 +148,13 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
     const compute = () => {
       let { whiteMs, blackMs } = game;
       if (game.status === 'active' && game.lastMoveAt !== null) {
-        const nowServer = Date.now() + skewRef.current;
-        const elapsed = Math.max(0, nowServer - game.lastMoveAt);
+        // elapsed since the mover pressed = time already gone when the SERVER
+        // serialized this frame (identical on every device) + time elapsed
+        // locally since we received it. No per-frame skew sample means both
+        // phones tick down in lockstep and converge at every move.
+        const alreadyElapsed = Math.max(0, game.serverNow - game.lastMoveAt);
+        const sinceReceipt = Math.max(0, Date.now() - recvAtRef.current);
+        const elapsed = alreadyElapsed + sinceReceipt;
         if (game.turn === 'w') whiteMs = Math.max(0, whiteMs - elapsed);
         else blackMs = Math.max(0, blackMs - elapsed);
       }
@@ -174,7 +183,9 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
 
   // Auto-claim when the running clock hits zero (either side)
   useEffect(() => {
-    if (!game || game.status !== 'active' || claimSentRef.current || !myColor) return;
+    // Only claim while actually connected — a brief SSE drop must not let a
+    // stale local clock cross zero and forfeit a game the server hasn't flagged.
+    if (!game || game.status !== 'active' || claimSentRef.current || !myColor || !connected) return;
     const running = game.turn === 'w' ? clocks.whiteMs : clocks.blackMs;
     if (game.lastMoveAt !== null && running <= 0) {
       claimSentRef.current = true;
@@ -183,7 +194,7 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
         claimSentRef.current = false;
       });
     }
-  }, [game, clocks, myColor, applyServerGame]);
+  }, [game, clocks, myColor, connected, applyServerGame]);
 
   // ── Move input ────────────────────────────────────────────────
   const canInteract =

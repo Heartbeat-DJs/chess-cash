@@ -155,8 +155,11 @@ async function createGame(
     ex,
     `INSERT INTO games (id, white_id, black_id, time_control, stake, fen, moves, status,
                         white_ms, black_ms, last_move_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL, ?, ?)`,
-    [id, whiteId, blackId, timeControl, stake, new Chess().fen(), baseMs, baseMs, now, now]
+     VALUES (?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, ?, ?, ?)`,
+    // last_move_at starts at game creation so White's clock runs from move
+    // one — White's first move is timed and gets the increment, and a no-show
+    // White can be flagged on time. (Previously NULL = untimed, un-incremented.)
+    [id, whiteId, blackId, timeControl, stake, new Chess().fen(), baseMs, baseMs, now, now, now]
   );
   if (stake > 0) {
     await recordTransaction(ex, whiteId, 'stake', -stake, id);
