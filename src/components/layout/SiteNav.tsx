@@ -8,10 +8,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import styles from './SiteNav.module.css';
 
 const LINKS = [
   { href: '/play', label: 'Play' },
+  { href: '/online', label: 'Online' },
   { href: '/puzzles', label: 'Puzzles' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/how-it-works', label: 'How It Works' },
@@ -21,6 +23,7 @@ const LINKS = [
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   // Close the menu on navigation (render-time state adjustment)
   const [prevPath, setPrevPath] = useState(pathname);
@@ -69,7 +72,15 @@ export default function SiteNav() {
               {l.label}
             </Link>
           ))}
-          <Link href="/play" className="btn btn-gold btn-sm">Play Now</Link>
+          {user ? (
+            <Link href="/online" className={styles.userChip} title="Your club account">
+              <span className={styles.userIcon}>♔</span>
+              <span className={styles.userName}>{user.username}</span>
+              <span className={styles.userCredits}>${(user.credits / 100).toFixed(2)}</span>
+            </Link>
+          ) : (
+            <Link href="/login" className="btn btn-gold btn-sm">Sign In</Link>
+          )}
         </div>
 
         <button
@@ -96,9 +107,28 @@ export default function SiteNav() {
               {l.label}
             </Link>
           ))}
-          <Link href="/play" className={`btn btn-gold ${styles.mobileCta}`} onClick={() => setOpen(false)}>
-            ♔ Play Now
-          </Link>
+          {user ? (
+            <>
+              <div className={styles.mobileAccount}>
+                <span className={styles.userIcon}>♔</span>
+                <span className={styles.userName}>{user.username}</span>
+                <span className={styles.userCredits}>${(user.credits / 100).toFixed(2)}</span>
+              </div>
+              <button
+                className={`btn btn-outline ${styles.mobileCta}`}
+                onClick={() => {
+                  void logout();
+                  setOpen(false);
+                }}
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link href="/login" className={`btn btn-gold ${styles.mobileCta}`} onClick={() => setOpen(false)}>
+              ♔ Sign In
+            </Link>
+          )}
         </div>
       )}
     </nav>

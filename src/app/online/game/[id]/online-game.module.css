@@ -1,0 +1,558 @@
+/* ===================================================================
+   ChessCash — Online Game Page (live friend games) — mobile-first
+   =================================================================== */
+
+/* ── Shared header ─────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(10, 10, 8, 0.85);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.logoIcon {
+    font-size: 1.5rem;
+    color: var(--gold-light);
+}
+
+.logoText {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+}
+
+.headerTag {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--text-gold);
+}
+
+.gameInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.matchBadge {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+}
+
+.stakeChip {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--gold-light);
+    background: rgba(197, 151, 59, 0.12);
+    border: 1px solid rgba(197, 151, 59, 0.3);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+.liveBadge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--emerald-light);
+}
+
+.liveDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--emerald-light);
+    animation: livePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(64, 145, 108, 0.5); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 5px rgba(64, 145, 108, 0); }
+}
+
+/* Connection state pill */
+.connPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.connDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: background var(--transition-fast);
+}
+
+.connOn .connDot {
+    background: var(--emerald-light);
+    box-shadow: 0 0 8px rgba(64, 145, 108, 0.6);
+}
+
+.connOff .connDot {
+    background: #D9A441;
+    box-shadow: 0 0 8px rgba(217, 164, 65, 0.6);
+    animation: connBlink 1s ease-in-out infinite;
+}
+
+@keyframes connBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.connLabel {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.connOn .connLabel { color: var(--emerald-light); }
+.connOff .connLabel { color: #D9A441; }
+
+.iconBtn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.iconBtn:hover {
+    color: var(--gold-light);
+    border-color: var(--border-medium);
+}
+
+/* ── Loading state ─────────────────────────────────────────────── */
+.loadingPage {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.loadingBody {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.loadingIcon {
+    font-size: 3.2rem;
+    color: var(--gold-light);
+    filter: drop-shadow(0 0 18px rgba(197, 151, 59, 0.4));
+    animation: seatPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes seatPulse {
+    0%, 100% { opacity: 1; transform: translateY(0); }
+    50% { opacity: 0.55; transform: translateY(-6px); }
+}
+
+.loadingText {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.loadingHint {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--text-tertiary);
+}
+
+/* ── Game screen ───────────────────────────────────────────────── */
+.gamePage {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.gameArea {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 10px 24px;
+    max-width: 580px;
+    margin: 0 auto;
+}
+
+.leftPanel {
+    display: none;
+}
+
+.boardColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.boardArea {
+    position: relative;
+}
+
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.controls {
+    display: none;
+}
+
+/* Mobile action bar */
+.actionBar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+}
+
+.actionBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 4px;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    text-align: center;
+}
+
+.actionBtn small {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+}
+
+.actionBtn:hover:not(:disabled) {
+    border-color: var(--border-medium);
+}
+
+.actionBtn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.actionDanger {
+    border-color: var(--crimson-light);
+    background: rgba(139, 26, 26, 0.2);
+}
+
+/* ── Overlays on the board ─────────────────────────────────────── */
+.toast {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    padding: 8px 16px;
+    background: rgba(20, 14, 10, 0.95);
+    border: 1px solid var(--crimson-light);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    max-width: 92%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: toastIn 200ms ease;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.drawBanner {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    animation: bannerIn 240ms cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+
+@keyframes bannerIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.drawActions {
+    display: flex;
+    gap: 8px;
+}
+
+.drawNote {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    z-index: 45;
+    padding: 8px 16px;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    animation: bannerIn 240ms cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+
+/* ── Left panel cards (desktop) ────────────────────────────────── */
+.wagerCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 20px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.wagerLabel {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+}
+
+.wagerAmount {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--gold-light);
+    text-shadow: 0 0 24px rgba(197, 151, 59, 0.35);
+}
+
+.wagerFriendly {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    padding: 6px 0;
+}
+
+.wagerBreakdown {
+    display: flex;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.demoTag {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    padding: 1px 7px;
+}
+
+.tableCard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+}
+
+.tableLabel {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--text-tertiary);
+}
+
+.tableRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tablePiece {
+    font-size: 1.2rem;
+    color: var(--gold-light);
+    flex-shrink: 0;
+}
+
+.tableName {
+    flex: 1;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tableRating {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+}
+
+.tableTc {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 10px;
+}
+
+.spectatorTag {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold-light);
+    background: rgba(197, 151, 59, 0.1);
+    border: 1px solid rgba(197, 151, 59, 0.3);
+    border-radius: var(--radius-full);
+    padding: 2px 9px;
+}
+
+/* ── Tablet+ refinements ───────────────────────────────────────── */
+@media (min-width: 768px) {
+    .matchBadge {
+        max-width: 240px;
+        font-size: 0.85rem;
+    }
+
+    .liveBadge {
+        display: inline-flex;
+    }
+
+    .connLabel {
+        display: inline;
+    }
+}
+
+/* ── Desktop layout ────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+    .gameArea {
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr) 300px;
+        align-items: start;
+        gap: 22px;
+        max-width: 1280px;
+        padding: 22px 24px 40px;
+    }
+
+    .leftPanel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        position: sticky;
+        top: 80px;
+    }
+
+    .boardColumn {
+        width: min(calc(100dvh - 250px), 640px);
+        margin: 0 auto;
+    }
+
+    .rightPanel {
+        position: sticky;
+        top: 80px;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .actionBar {
+        display: none;
+    }
+}

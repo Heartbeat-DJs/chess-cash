@@ -23,8 +23,6 @@ export default function PlayPage() {
   const { settings } = useSettings();
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [email, setEmail] = useState('');
-  const [notified, setNotified] = useState(false);
 
   // Daily puzzle is date-dependent and stats read localStorage —
   // resolve both only after mount to avoid hydration mismatch.
@@ -32,11 +30,6 @@ export default function PlayPage() {
     setPuzzle(getDailyPuzzle());
     setStats(computeStats());
   }, []);
-
-  function handleNotify(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (email.trim()) setNotified(true);
-  }
 
   return (
     <div className={styles.page}>
@@ -88,39 +81,21 @@ export default function PlayPage() {
             </span>
           </Link>
 
-          {/* Online Cash Matches — coming soon */}
-          <div className={`${styles.modeCard} ${styles.comingSoon}`}>
-            <span className={styles.ribbon}>Coming Soon</span>
-            <div className={`${styles.modeIcon} ${styles.modeIconMuted}`}>
-              <span>⚔</span>
+          {/* Play a Friend — live online matches */}
+          <Link href="/online" className={styles.modeCard}>
+            <span className={styles.featuredTag}>New</span>
+            <div className={styles.modeIcon}>
+              <span>⚔︎</span>
             </div>
-            <h2 className={`${styles.modeTitle} ${styles.modeTitleMuted}`}>
-              Online Cash Matches
-            </h2>
+            <h2 className={styles.modeTitle}>Play a Friend</h2>
             <p className={styles.modeCopy}>
-              Real opponents. Real stakes. Real soon.
+              Open a private table, send the invite code, and settle it over
+              the board — live, with real stakes on the line.
             </p>
-            {notified ? (
-              <p className={styles.notifySuccess} role="status">
-                ✓ You&apos;re on the list
-              </p>
-            ) : (
-              <form className={styles.notifyForm} onSubmit={handleNotify}>
-                <input
-                  type="email"
-                  required
-                  className={styles.notifyInput}
-                  placeholder="your@address.com"
-                  aria-label="Email for launch notification"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <button type="submit" className={styles.notifyBtn}>
-                  Notify Me
-                </button>
-              </form>
-            )}
-          </div>
+            <span className={styles.modeCta}>
+              Enter the Back Room <span className={styles.ctaArrow}>→</span>
+            </span>
+          </Link>
         </section>
 
         {/* ── Daily Puzzle ──────────────────────────────────── */}

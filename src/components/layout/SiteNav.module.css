@@ -71,6 +71,55 @@
     color: var(--gold-light);
 }
 
+/* ── Account chip ──────────────────────────────────────────────── */
+.userChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(197, 151, 59, 0.1);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-full);
+    transition: all var(--transition-fast);
+}
+
+.userChip:hover {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-gold);
+}
+
+.userIcon {
+    color: var(--gold-light);
+    font-size: 1.1rem;
+}
+
+.userName {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.userCredits {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--emerald-light);
+}
+
+.mobileAccount {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 1.1rem;
+}
+
 /* ── Hamburger ─────────────────────────────────────────────────── */
 .burger {
     display: none;

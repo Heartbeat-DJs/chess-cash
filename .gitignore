@@ -45,3 +45,6 @@ next-env.d.ts
 
 # local agent session config
 .claude/
+
+# server data (sqlite)
+/data/
