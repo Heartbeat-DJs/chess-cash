@@ -392,22 +392,36 @@ async function flagIfExpired(ex: Exec, row: GameRow): Promise<boolean> {
 
 export async function getGame(gameId: string): Promise<GameView> {
   const db = await getDb();
-  // Settling-on-read can pay out, so it must run inside a write transaction
-  // (serialized by SQLite) — the conditional claim in settle() then guarantees
-  // exactly-one payout even across concurrent readers.
+  // Fast path: a plain pooled read. Most GETs/SSE-opens are on games that are
+  // not active or nowhere near flagging, and opening a write transaction for
+  // those needlessly serializes SQLite writes and adds latency.
+  const row = await loadGame(db, gameId);
+  const moves = JSON.parse(row.moves) as string[];
+  const turn: 'w' | 'b' = moves.length % 2 === 0 ? 'w' : 'b';
+  const remaining =
+    row.last_move_at === null
+      ? Infinity
+      : (turn === 'w' ? Number(row.white_ms) : Number(row.black_ms)) -
+        (Date.now() - Number(row.last_move_at));
+  const mightFlag = row.status === 'active' && row.last_move_at !== null && remaining <= 0;
+  if (!mightFlag) return toGameView(db, row);
+
+  // Only when a timeout settle is actually possible do we escalate to a write
+  // transaction. settle()'s atomic claim still guarantees exactly-one payout
+  // even across concurrent readers, and we re-load inside the tx for safety.
   const tx = await db.transaction('write');
-  let row: GameRow;
+  let freshRow: GameRow;
   let settled = false;
   try {
-    row = await loadGame(tx, gameId);
-    settled = await flagIfExpired(tx, row);
+    freshRow = await loadGame(tx, gameId);
+    settled = await flagIfExpired(tx, freshRow);
     await tx.commit();
   } catch (e) {
     await tx.rollback();
     throw e;
   }
-  if (settled) await broadcast(db, row);
-  return toGameView(db, row);
+  if (settled) await broadcast(db, freshRow);
+  return toGameView(db, freshRow);
 }
 
 export async function applyMove(

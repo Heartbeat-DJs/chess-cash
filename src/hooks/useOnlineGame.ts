@@ -34,12 +34,19 @@ export interface OnlineGameView {
 }
 
 async function post(url: string, body?: unknown): Promise<{ game?: OnlineGameView; error?: string }> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return res.json().catch(() => ({ error: 'Network error' }));
+  // Must NEVER throw — callers rely on a {game} | {error} result to release
+  // the clock freeze. A bare fetch() rejects on a dropped connection, so the
+  // whole thing is guarded, not just the json() parse.
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return res.json().catch(() => ({ error: 'Network error' }));
+  } catch {
+    return { error: 'Network error' };
+  }
 }
 
 export function useOnlineGame(gameId: string, autoQueen = false) {
@@ -66,6 +73,14 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   const prevMovesRef = useRef<number>(-1);
   const prevStatusRef = useRef<string | null>(null);
   const claimSentRef = useRef(false);
+  // True between submitting our own move and the server frame coming back, so
+  // the displayed clock can freeze instead of draining during the round-trip.
+  const pendingMoveRef = useRef(false);
+  // Ordering guard: frames can arrive out of order (a reconnect re-seed fetch
+  // can resolve AFTER a newer SSE frame). Never apply a strictly-older position,
+  // and for the same position never apply an older server snapshot.
+  const lastMovesRef = useRef<number>(-1);
+  const lastServerNowRef = useRef<number>(-1);
   const gameRef = useRef<OnlineGameView | null>(null);
   // Keep a ref to the latest game for stale-free reads inside callbacks
   useEffect(() => {
@@ -73,18 +88,37 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
   });
 
   const applyServerGame = useCallback((g: OnlineGameView) => {
+    // Drop stale frames so a late re-seed can't roll the board/clock backward.
+    if (g.moves.length < lastMovesRef.current) return;
+    if (g.moves.length === lastMovesRef.current && g.serverNow < lastServerNowRef.current) return;
+    lastMovesRef.current = g.moves.length;
+    lastServerNowRef.current = g.serverNow;
     recvAtRef.current = Date.now();
+    pendingMoveRef.current = false; // a server frame is the truth — unfreeze
     setGame(g);
   }, []);
 
   // ── SSE subscription ──────────────────────────────────────────
   useEffect(() => {
+    // New game (or rematch) → reset the ordering guard for the fresh stream.
+    lastMovesRef.current = -1;
+    lastServerNowRef.current = -1;
     let es: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
 
-    function connect() {
+    function reseed() {
+      // On (re)connect, pull the authoritative state immediately so we don't
+      // keep interpolating a stale clock while waiting for the first SSE frame.
+      fetch(`/api/games/${gameId}`, { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => { if (!disposed && d?.game) applyServerGame(d.game as OnlineGameView); })
+        .catch(() => { /* SSE frame will re-seed shortly */ });
+    }
+
+    function connect(isReconnect: boolean) {
       if (disposed) return;
+      if (isReconnect) reseed();
       es = new EventSource(`/api/games/${gameId}/events`);
       es.onopen = () => setConnected(true);
       es.onmessage = (e) => {
@@ -97,13 +131,15 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
       es.onerror = () => {
         setConnected(false);
         es?.close();
+        es = null;
         if (!disposed) {
-          retryTimer = setTimeout(connect, 2500);
+          if (retryTimer) clearTimeout(retryTimer); // never leak a prior timer
+          retryTimer = setTimeout(() => connect(true), 2500);
         }
       };
     }
 
-    connect();
+    connect(false);
     return () => {
       disposed = true;
       if (retryTimer) clearTimeout(retryTimer);
@@ -147,7 +183,9 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
     if (!game) return;
     const compute = () => {
       let { whiteMs, blackMs } = game;
-      if (game.status === 'active' && game.lastMoveAt !== null) {
+      // While our own move is in flight, freeze the clock at the last server
+      // balance rather than draining against the pre-move state for a round-trip.
+      if (game.status === 'active' && game.lastMoveAt !== null && !pendingMoveRef.current) {
         // elapsed since the mover pressed = time already gone when the SERVER
         // serialized this frame (identical on every device) + time elapsed
         // locally since we received it. No per-frame skew sample means both
@@ -210,11 +248,18 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
       if (!g) return;
       setSelectedSquare(null);
       setLegalMoves([]);
+      // Freeze our clock while the move is in flight; the returned frame snaps
+      // it to the authoritative balance (applyServerGame clears the freeze).
+      pendingMoveRef.current = true;
       const res = await post(`/api/games/${g.id}/move`, { from, to, promotion });
       if (res.game) {
         applyServerGame(res.game);
-      } else if (res.error) {
-        setActionError(res.error);
+      } else {
+        // Anything that isn't an accepted move (error OR an unexpected body)
+        // must release the freeze so the clock never sticks above zero while
+        // the opponent's client flags us on time.
+        pendingMoveRef.current = false;
+        setActionError(res.error ?? 'Move not sent — check your connection.');
         setTimeout(() => setActionError(null), 2500);
       }
     },
