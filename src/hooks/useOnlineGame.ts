@@ -33,19 +33,29 @@ export interface OnlineGameView {
   serverNow: number;
 }
 
-async function post(url: string, body?: unknown): Promise<{ game?: OnlineGameView; error?: string }> {
-  // Must NEVER throw — callers rely on a {game} | {error} result to release
-  // the clock freeze. A bare fetch() rejects on a dropped connection, so the
-  // whole thing is guarded, not just the json() parse.
+async function post(
+  url: string,
+  body?: unknown
+): Promise<{ game?: OnlineGameView; error?: string; networkError?: boolean }> {
+  // Must NEVER throw — callers rely on a {game} | {error} result. We also flag
+  // `networkError` so the caller can tell a DEFINITIVE server rejection (the
+  // move was refused; safe to roll back) from a TRANSIENT failure (the move
+  // may have committed; must NOT rewind — let SSE/poll reconcile).
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    return res.json().catch(() => ({ error: 'Network error' }));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // 4xx = definitive rejection; 5xx = ambiguous (treat as transient).
+      const networkError = res.status >= 500;
+      return { error: (data as { error?: string }).error ?? 'Request failed.', networkError };
+    }
+    return data as { game?: OnlineGameView };
   } catch {
-    return { error: 'Network error' };
+    return { error: 'Network error', networkError: true };
   }
 }
 
@@ -91,8 +101,30 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
     // Drop stale frames so a late re-seed can't roll the board/clock backward.
     if (g.moves.length < lastMovesRef.current) return;
     if (g.moves.length === lastMovesRef.current && g.serverNow < lastServerNowRef.current) return;
-    lastMovesRef.current = g.moves.length;
     lastServerNowRef.current = g.serverNow;
+    // Idempotence: a 2s backstop poll of an idle position only changes
+    // serverNow. Skip the re-render/clock re-anchor when nothing material
+    // changed — the running clock keeps interpolating from its existing anchor.
+    const cur = gameRef.current;
+    if (
+      cur &&
+      cur.fen === g.fen &&
+      cur.moves.length === g.moves.length &&
+      cur.status === g.status &&
+      cur.result === g.result &&
+      cur.endReason === g.endReason &&
+      cur.drawOffer === g.drawOffer &&
+      cur.rematchGameId === g.rematchGameId &&
+      cur.rematchOfferBy === g.rematchOfferBy &&
+      cur.whiteMs === g.whiteMs &&
+      cur.blackMs === g.blackMs &&
+      cur.lastMoveAt === g.lastMoveAt
+    ) {
+      lastMovesRef.current = g.moves.length;
+      pendingMoveRef.current = false;
+      return;
+    }
+    lastMovesRef.current = g.moves.length;
     recvAtRef.current = Date.now();
     pendingMoveRef.current = false; // a server frame is the truth — unfreeze
     setGame(g);
@@ -146,6 +178,26 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
       es?.close();
     };
   }, [gameId, applyServerGame]);
+
+  // ── Polling backstop ──────────────────────────────────────────
+  // Mobile browsers suspend EventSource when backgrounded or on flaky
+  // cellular, so the opponent's move can otherwise not arrive until the next
+  // interaction. Poll fast (2s) when the SSE stream is down — the case this
+  // guards — and slowly (7s) when it's healthy, just to catch a "zombie" SSE
+  // that's open but not delivering. applyServerGame is idempotent, so an
+  // unchanged poll is nearly free; we also skip while our own move is in flight.
+  useEffect(() => {
+    const interval = connected ? 7000 : 2000;
+    const id = window.setInterval(() => {
+      const g = gameRef.current;
+      if (!g || g.status !== 'active' || pendingMoveRef.current) return;
+      fetch(`/api/games/${gameId}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.game) applyServerGame(d.game as OnlineGameView); })
+        .catch(() => { /* SSE / next poll will catch up */ });
+    }, interval);
+    return () => window.clearInterval(id);
+  }, [gameId, connected, applyServerGame]);
 
   // ── Sounds + selection reset on remote updates ────────────────
   useEffect(() => {
@@ -248,18 +300,50 @@ export function useOnlineGame(gameId: string, autoQueen = false) {
       if (!g) return;
       setSelectedSquare(null);
       setLegalMoves([]);
-      // Freeze our clock while the move is in flight; the returned frame snaps
-      // it to the authoritative balance (applyServerGame clears the freeze).
-      pendingMoveRef.current = true;
+
+      // OPTIMISTIC: apply the move locally NOW so the piece moves instantly,
+      // instead of snapping back until the server round-trip completes. The
+      // server frame reconciles (authoritative fen + clocks) when it arrives.
+      const prevMovesLen = g.moves.length;
+      let didOptimistic = false;
+      try {
+        const c = new Chess(g.fen);
+        const made = c.move({ from, to, promotion: (promotion as 'q' | 'r' | 'b' | 'n' | undefined) });
+        if (made) {
+          didOptimistic = true;
+          pendingMoveRef.current = true; // freeze our clock until reconcile
+          // Advance the ordering guard so a stale poll/SSE frame can't revert
+          // our optimistic move before the authoritative frame lands.
+          lastMovesRef.current = prevMovesLen + 1;
+          setGame({ ...g, fen: c.fen(), moves: [...g.moves, made.san], turn: c.turn() as 'w' | 'b' });
+        }
+      } catch {
+        /* couldn't apply locally — let the server be the sole judge */
+      }
+
       const res = await post(`/api/games/${g.id}/move`, { from, to, promotion });
       if (res.game) {
         applyServerGame(res.game);
-      } else {
-        // Anything that isn't an accepted move (error OR an unexpected body)
-        // must release the freeze so the clock never sticks above zero while
-        // the opponent's client flags us on time.
+      } else if (res.networkError) {
+        // TRANSIENT failure: the move may already be committed server-side, so
+        // do NOT rewind the board (that would clobber a move the opponent may
+        // have already replied to). Drop the ordering guard so the next
+        // authoritative poll/SSE frame reconciles us up OR down to the truth.
         pendingMoveRef.current = false;
-        setActionError(res.error ?? 'Move not sent — check your connection.');
+        lastMovesRef.current = -1;
+        lastServerNowRef.current = -1;
+        setActionError('Connection hiccup — re-syncing…');
+        setTimeout(() => setActionError(null), 2000);
+      } else {
+        // DEFINITIVE rejection (e.g. illegal move): roll back — but only if our
+        // optimistic move is still the latest local state. If a newer frame has
+        // already superseded it, leave the board alone.
+        pendingMoveRef.current = false;
+        if (didOptimistic && lastMovesRef.current === prevMovesLen + 1) {
+          lastMovesRef.current = prevMovesLen;
+          setGame(g);
+        }
+        setActionError(res.error ?? 'Move rejected.');
         setTimeout(() => setActionError(null), 2500);
       }
     },
